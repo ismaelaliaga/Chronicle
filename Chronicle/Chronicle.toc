@@ -1,0 +1,15 @@
+## Interface: 11507
+## Title: Chronicle
+## Notes: Codex de lore de Azeroth para WoW Classic: descubre el mundo y consulta su historia.
+## Author: Ismael Aliaga
+## Version: 0.2.0-dev
+## SavedVariablesPerCharacter: ChronicleCharDB
+
+# Orden de carga (Fase 1): utilidades -> bus de eventos -> estado -> slash -> arranque.
+# Lo que se añada en fases futuras va DESPUES de Core y en este orden de capas:
+# Data -> Services -> UI. Core nunca depende de las capas que se cargan despues.
+Core/Utils.lua
+Core/Events.lua
+Core/State.lua
+Core/Slash.lua
+Core/Init.lua
