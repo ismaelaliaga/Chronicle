@@ -2,24 +2,7 @@
 -- Comprueban que el .toc carga sin errores y en el orden correcto, y que Events, State,
 -- Slash e Init se comportan como se espera. No sustituyen probarlo en el cliente real.
 
-local passed, failed = 0, 0
-
-local function check(name, condition, detail)
-    if condition then
-        passed = passed + 1
-        print(string.format("[OK]   %s", name))
-    else
-        failed = failed + 1
-        print(string.format("[FAIL] %s -- %s", name, detail or ""))
-    end
-end
-
-local function contains(list, text)
-    for _, s in ipairs(list) do
-        if s:find(text, 1, true) then return true end
-    end
-    return false
-end
+-- `check` y `contains` los provee support.lua (comunes a todos los ficheros de pruebas).
 
 -- ===================== Carga e inicialización =====================
 ChronicleCharDB = nil -- primera vez: el cliente no tiene SavedVariables
@@ -352,6 +335,3 @@ for _, file in ipairs(ADDON_FILES) do
 end
 check("ningún fichero salvo Core/State.lua toca ChronicleCharDB en su código",
     #offenders == 0, table.concat(offenders, ", "))
-
-print(string.format("\nResultado: %d OK, %d FAIL", passed, failed))
-if failed > 0 then error("hay pruebas fallidas") end

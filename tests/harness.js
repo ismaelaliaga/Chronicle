@@ -33,6 +33,13 @@ const fileSources = tocFiles
     })
     .join(",\n");
 
+// Ficheros de pruebas, en orden. support.lua primero: define los helpers comunes.
+const TEST_FILES = ["support.lua", "core_tests.lua", "schema_tests.lua", "registry_tests.lua"];
+const testFileSources = TEST_FILES.map((name) => {
+    const src = fs.readFileSync(path.join(__dirname, name), "utf8");
+    return `{ name = "tests/${name}", source = ${toLuaLongBracket(src)} }`;
+}).join(",\n");
+
 const driverSource = `
 ${fs.readFileSync(path.join(__dirname, "mock.lua"), "utf8")}
 
@@ -52,7 +59,15 @@ function LoadAddon()
     end
 end
 
-${fs.readFileSync(path.join(__dirname, "core_tests.lua"), "utf8")}
+-- Cada fichero de pruebas se ejecuta como su propio chunk (sus "local" no se mezclan).
+-- support.lua define check/contains/deepEqual/FinishTests como globales.
+TEST_FILES = {
+${testFileSources}
+}
+for _, file in ipairs(TEST_FILES) do
+    assert(load(file.source, "@" .. file.name))()
+end
+FinishTests()
 `;
 
 const L = lauxlib.luaL_newstate();

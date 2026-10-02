@@ -33,6 +33,7 @@ local ADDON_NAME = "Chronicle"
 local MODULES = {
     { name = "Events", required = true },
     { name = "State", required = true },
+    { name = "Registry", required = true }, -- no se da por listo si los datos no superan su validación
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él
 }
 

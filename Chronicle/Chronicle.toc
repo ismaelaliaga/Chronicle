@@ -5,11 +5,14 @@
 ## Version: 0.2.0-dev
 ## SavedVariablesPerCharacter: ChronicleCharDB
 
-# Orden de carga (Fase 1): utilidades -> bus de eventos -> estado -> slash -> arranque.
-# Lo que se añada en fases futuras va DESPUES de Core y en este orden de capas:
-# Data -> Services -> UI. Core nunca depende de las capas que se cargan despues.
+# Orden de carga. Capas: Core -> Data -> (futuros Services -> UI). Cada fichero solo
+# depende de los anteriores. Core/Init.lua va el ULTIMO: arranca los modulos, asi que todos
+# deben estar ya definidos. Los ficheros de datos de entidades (Fase 3) irán entre
+# Data/Registry.lua y Core/Init.lua.
 Core/Utils.lua
 Core/Events.lua
 Core/State.lua
 Core/Slash.lua
+Data/Schema.lua
+Data/Registry.lua
 Core/Init.lua
