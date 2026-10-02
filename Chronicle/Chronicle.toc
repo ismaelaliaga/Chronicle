@@ -24,6 +24,9 @@ Data/Entities/Npcs.lua
 Localization/Localization.lua
 Services/Resolver.lua
 Services/Discovery.lua
+Services/MapPosition.lua
+Services/Proximity.lua
+Services/ZoneDiscovery.lua
 Localization/esES/EasternKingdoms.lua
 Localization/esES/DunMorogh.lua
 Localization/esES/LochModan.lua

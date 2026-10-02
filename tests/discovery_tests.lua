@@ -436,7 +436,9 @@ check("17e. si el Registry falla su validación, Discovery NO se intenta: omitid
 announced = Boot(nil, function() Chronicle.Resolver:AddAlias("esES", "city:no_existe", "Fantasma") end)
 check("17f. un módulo independiente que falla (Resolver) no impide inicializar Discovery ni se marca como omitido",
     Chronicle.Init.ready == false and announced == 0 and Chronicle.Init.failed.Resolver ~= nil
-        and Chronicle.Discovery:IsReady() == true and next(Chronicle.Init.skipped) == nil)
+        and Chronicle.Discovery:IsReady() == true and Chronicle.Init.skipped.Discovery == nil)
+-- (Fase 6: ZoneDiscovery depende del Resolver y sí se omite cuando este falla; la aserción original,
+-- que exigía que NO hubiera ningún omitido, se acota a lo que esta prueba declara: Discovery.)
 announced = Boot(nil)
 check("17g. con todo correcto: Init.ready, nada omitido ni fallido y el arranque se anuncia una vez",
     Chronicle.Init.ready == true and announced == 1 and next(Chronicle.Init.failed) == nil and next(Chronicle.Init.skipped) == nil)

@@ -43,6 +43,12 @@ local MODULES = {
     -- Discovery lee y guarda el progreso con State y valida entidades con el Registry: no se intenta si
     -- alguno de los dos no está listo.
     { name = "Discovery", required = true, requires = { "State", "Registry" } },
+    -- MapPosition no tiene estado que inicializar (lee el cliente en cada consulta): basta con que exista.
+    { name = "MapPosition", required = true },
+    -- Proximity necesita MapPosition y un Discovery listo; sin proveedor de objetivos no descubre nada.
+    { name = "Proximity", required = true, requires = { "MapPosition", "Discovery" } },
+    -- ZoneDiscovery empieza a escuchar los eventos de zona: necesita nombres, el Resolver y Discovery listos.
+    { name = "ZoneDiscovery", required = true, requires = { "MapPosition", "Resolver", "Discovery" } },
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él
 }
 
