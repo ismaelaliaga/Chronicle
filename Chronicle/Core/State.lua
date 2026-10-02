@@ -124,7 +124,9 @@ function State:Set(value, ...)
     if n == 0 then
         error("Chronicle.State:Set: falta la ruta", 2)
     end
-    if n == 1 and select(1, ...) == "schemaVersion" then
+    if select(1, ...) == "schemaVersion" then
+        -- Cualquier ruta que empiece por schemaVersion: también "schemaVersion", "x"
+        -- la machacaría convirtiéndola en tabla.
         error("Chronicle.State:Set: schemaVersion no se modifica desde fuera de State", 2)
     end
 

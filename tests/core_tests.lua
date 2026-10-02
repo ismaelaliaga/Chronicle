@@ -190,6 +190,123 @@ check("un módulo que falla en Init se registra en Init.failed",
     Chronicle.Init.failed["Slash"] ~= nil and Chronicle.Init.failed["Slash"]:find("slash roto", 1, true) ~= nil)
 check("y el resto de módulos sí se inicializan", Chronicle.State:IsReady() == true)
 
+-- Arranca el addon de cero: carga los ficheros, deja que `prepare` sabotee lo que haga
+-- falta ANTES de ADDON_LOADED, y devuelve cuántas veces se anunció Chronicle.Initialized
+-- (nil si no se pudo ni suscribir porque el bus no existe).
+local function Boot(prepare)
+    LoadAddon()
+    ChronicleCharDB = nil
+    if prepare then prepare() end
+    local announced = 0
+    if Chronicle.Events then
+        Chronicle.Events:Register("Chronicle.Initialized", function() announced = announced + 1 end)
+    end
+    local ok, err = pcall(FireEvent, "ADDON_LOADED", "Chronicle")
+    return announced, ok, err
+end
+local function failedNames()
+    local names = {}
+    for name in pairs(Chronicle.Init.failed) do names[#names + 1] = name end
+    table.sort(names)
+    return table.concat(names, ",")
+end
+
+-- --- Arranque correcto ---
+local announced = Boot()
+check("arranque correcto: Init.ready es true y no hay fallos",
+    Chronicle.Init.ready == true and next(Chronicle.Init.failed) == nil)
+check("arranque correcto: Chronicle.Initialized se emite exactamente una vez", announced == 1)
+check("arranque correcto: no se reporta ningún error", #ReportedErrors == 0)
+
+-- --- Idempotencia: un segundo intento accidental no duplica nada ---
+local slashBefore = SlashCmdList["CHRONICLE"]
+Chronicle.Init:Run()
+FireEvent("ADDON_LOADED", "Chronicle")
+check("un segundo Init:Run / ADDON_LOADED no vuelve a emitir Chronicle.Initialized", announced == 1)
+check("un segundo intento no vuelve a registrar el comando slash", SlashCmdList["CHRONICLE"] == slashBefore)
+check("un segundo intento no cambia el estado de Init", Chronicle.Init.ready == true and next(Chronicle.Init.failed) == nil)
+
+-- --- Módulo requerido que falla (State) ---
+announced = Boot(function() Chronicle.State.Init = function() error("estado roto") end end)
+check("State falla: se registra en Init.failed", failedNames() == "State"
+    and Chronicle.Init.failed.State:find("estado roto", 1, true) ~= nil)
+check("State falla: Init.ready es false", Chronicle.Init.ready == false)
+check("State falla: NO se anuncia Chronicle.Initialized", announced == 0)
+check("State falla: se comunica con el mecanismo de errores",
+    contains(ReportedErrors, "estado roto") and contains(ReportedErrors, "State"))
+check("State falla: los módulos independientes se siguen intentando (Slash registrado)",
+    SlashCmdList["CHRONICLE"] ~= nil)
+ChatLog = {}
+SlashCmdList["CHRONICLE"]("")
+check("State falla: /chronicle NO afirma que el Core está activo y nombra el fallo",
+    not contains(ChatLog, "Core activo") and contains(ChatLog, "NO se ha inicializado")
+        and contains(ChatLog, "State"))
+
+-- --- Bus de eventos ausente ---
+local okMissing
+announced, okMissing = Boot(function() Chronicle.Events = nil end)
+check("Events ausente: el arranque no lanza ningún error de Lua (ni un segundo error)", okMissing == true)
+check("Events ausente: se diagnostica en Init.failed y Init.ready es false",
+    Chronicle.Init.failed.Events ~= nil and Chronicle.Init.failed.Events:find("no está cargado", 1, true) ~= nil
+        and Chronicle.Init.ready == false)
+check("Events ausente: no se anuncia nada", announced == 0)
+check("Events ausente: se intentan el resto de módulos independientes",
+    Chronicle.State:IsReady() == true and SlashCmdList["CHRONICLE"] ~= nil)
+check("Events ausente: se comunica por el mecanismo de errores",
+    contains(ReportedErrors, "Events") and contains(ReportedErrors, "no está cargado"))
+
+-- --- Bus de eventos presente pero inutilizable ---
+Boot(function() Chronicle.Events.Init = function() error("bus roto") end end)
+check("Events.Init falla: Init.ready es false y queda diagnosticado",
+    Chronicle.Init.ready == false and Chronicle.Init.failed.Events ~= nil)
+
+-- Emit roto: el módulo se inicializa pero no puede anunciar.
+local okBrokenEmit
+announced, okBrokenEmit = Boot(function()
+    Chronicle.Events.Emit = function() error("emit roto") end
+end)
+check("Emit que lanza error: no se propaga, se diagnostica y Init.ready pasa a false",
+    okBrokenEmit == true and Chronicle.Init.ready == false
+        and Chronicle.Init.failed.Events ~= nil and Chronicle.Init.failed.Events:find("emit roto", 1, true) ~= nil)
+Boot(function() Chronicle.Events.Emit = nil end)
+check("Emit inexistente: no se propaga, se diagnostica y Init.ready es false",
+    Chronicle.Init.ready == false and Chronicle.Init.failed.Events ~= nil)
+
+-- --- Módulo no requerido (Slash) ---
+announced = Boot(function() Chronicle.Slash.Init = function() error("slash roto") end end)
+check("Slash (no requerido) falla: queda en Init.failed pero Init.ready sigue true",
+    failedNames() == "Slash" and Chronicle.Init.ready == true)
+check("Slash (no requerido) falla: el arranque se anuncia (los requeridos están bien)", announced == 1)
+check("Slash (no requerido) falla: el error se comunica", contains(ReportedErrors, "slash roto"))
+
+announced = Boot(function() Chronicle.Slash = nil end)
+check("Slash ausente (no requerido): se diagnostica como no cargado y el arranque sigue",
+    Chronicle.Init.failed.Slash ~= nil and Chronicle.Init.ready == true and announced == 1)
+
+-- --- Un suscriptor roto de Chronicle.Initialized no estropea el arranque ---
+LoadAddon()
+ChronicleCharDB = nil
+Chronicle.Events:Register("Chronicle.Initialized", function() error("suscriptor roto") end)
+FireEvent("ADDON_LOADED", "Chronicle")
+check("un suscriptor de Initialized que falla se reporta pero Init.ready sigue true",
+    Chronicle.Init.ready == true and next(Chronicle.Init.failed) == nil
+        and contains(ReportedErrors, "suscriptor roto"))
+
+-- --- Sin geterrorhandler: el reporte tiene respaldo y no genera un segundo error ---
+local savedHandler = geterrorhandler
+geterrorhandler = nil
+local okNoHandler
+announced, okNoHandler = Boot(function() Chronicle.State.Init = function() error("sin handler") end end)
+geterrorhandler = savedHandler
+check("sin geterrorhandler: el fallo se registra y no se lanza ningún error de Lua",
+    okNoHandler == true and Chronicle.Init.failed.State ~= nil and Chronicle.Init.ready == false)
+
+-- --- State:Set no deja machacar schemaVersion con una ruta más profunda ---
+Boot()
+check("State:Set rechaza rutas que empiecen por schemaVersion, también las más profundas",
+    not pcall(function() Chronicle.State:Set("x", "schemaVersion", "sub") end)
+        and ChronicleCharDB.schemaVersion == 1)
+
 -- ===================== Slash =====================
 LoadAddon()
 ChronicleCharDB = nil

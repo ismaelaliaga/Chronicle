@@ -21,8 +21,22 @@ function Slash:Register(name, handler)
     commands[strlower(name)] = handler
 end
 
--- Mensaje de comprobación del Core.
+-- Mensaje de comprobación del Core. Si el arranque no se completó, lo dice y lista los
+-- módulos que fallaron en vez de afirmar que todo está activo.
 function Slash.PrintStatus()
+    local init = Chronicle.Init
+    if not (init and init.ready) then
+        local failed = {}
+        for name in pairs(init and init.failed or {}) do
+            failed[#failed + 1] = name
+        end
+        table.sort(failed)
+        Utils.Print("el Core NO se ha inicializado correctamente"
+            .. (#failed > 0 and (" (fallos: " .. table.concat(failed, ", ") .. ")") or "")
+            .. ".")
+        return
+    end
+
     local State = Chronicle.State
     Utils.Print(string.format(
         "Core activo (v%s). Eventos: %s | Estado: %s, schemaVersion %s%s.",
