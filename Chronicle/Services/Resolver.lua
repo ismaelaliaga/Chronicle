@@ -24,7 +24,8 @@ Chronicle = Chronicle or {}
 --
 -- CONTRATO, Resolve(text [, opts]) -> id            si hay UNA sola entidad candidata
 --                                   -> nil, razón[, candidatos]   si no
---   razones: "not_ready"  el índice aún no se ha construido (Init no se ha ejecutado)
+--   razones: "not_ready"  no hay índice válido: Init/Rebuild aún no han tenido éxito, falló
+--                         la última validación, o se añadió un alias después
 --            "empty"      text no es una cadena, o queda vacía al normalizar
 --            "not_found"  ningún nombre ni alias coincide
 --            "ambiguous"  lo mismo es nombre/alias de varias entidades; el tercer valor es la
@@ -35,10 +36,31 @@ Chronicle = Chronicle or {}
 --   Un ID canónico ("zone:dun_morogh") NO es un nombre: Resolve no lo acepta ni lo confunde con
 --   un alias (devuelve "not_found"). Quien ya tiene un ID usa Registry:Has().
 --
--- ÍNDICE: se construye en Init (y al llamar a Rebuild) a partir de Localization y de los alias;
--- las consultas solo lo leen. Un alias o nombre de un ID que no está en el Registry no se indexa
--- y se informa como error en Validate. Los resultados no dependen del orden de inserción: los
--- candidatos salen siempre ordenados.
+-- ÍNDICE Y ESTADO DE PREPARACIÓN
+--   El índice (nombre/alias normalizado -> IDs) se construye a partir de Localization y de los
+--   alias; las consultas solo lo leen. Un alias o nombre de un ID que no está en el Registry no se
+--   indexa y es un error de Validate. Los candidatos salen siempre ordenados.
+--
+--   INVARIANTE ÚNICA: IsReady() es true si y solo si existe un índice, y un índice solo existe si
+--   se construyó DESPUÉS de superar Validate. No hay una bandera aparte que pueda contradecirlo:
+--   IsReady() == false  <=>  Resolve() devuelve "not_ready".
+--
+--   Init()      valida, construye el índice y deja el módulo listo; si la validación falla lanza un
+--               error descriptivo y el módulo queda NO listo. Es lo que llama Core/Init.
+--   Rebuild()   hace lo mismo que Init() pero sin lanzar: devuelve true, o false y el mensaje de la
+--               validación. Siempre VALIDA antes de construir, así que no hay forma de dejar el
+--               módulo listo saltándose la validación. Falla en modo seguro: si el resultado es
+--               false, el índice anterior (si lo había) se descarta y el módulo queda NO listo,
+--               porque lo que lo respaldaba (alias, Registry o Localization) ya no pasa la
+--               validación. Llamarlo otra vez no lo "arregla": solo tiene éxito si los datos son
+--               válidos.
+--   AddAlias()  un alias VÁLIDO se añade e invalida el índice (IsReady() pasa a false y Resolve
+--               devuelve "not_ready") hasta el siguiente Init()/Rebuild() satisfactorio. Un alias
+--               RECHAZADO no cambia los alias aceptados ni el índice: si había uno válido, sigue
+--               siendo válido y listo. El rechazo queda anotado en GetRejected() y, al ser un error
+--               de datos, hará fallar la siguiente validación (Init/Rebuild); IsReady() describe
+--               el último Init/Rebuild, no revoca por un rechazo posterior.
+--   Validate()  solo informa; nunca cambia el estado de preparación.
 --
 -- Los alias no verificados no se marcan como verificados aquí: la procedencia de cada uno está
 -- anotada junto a su definición (Localization/<idioma>/Aliases.lua).
@@ -83,8 +105,9 @@ local function NewResolver(registry, localization)
     local aliases = {} -- { { lang, id, alias, key }, ... } en orden de llegada
     local aliasSeen = {} -- "lang|id|key" -> true
     local rejected = {} -- { { lang, id, alias, error }, ... }
-    local index = nil -- clave normalizada -> { [id] = true }; nil hasta Init/Rebuild
-    local ready = false
+    -- clave normalizada -> { [id] = true }. nil = el módulo NO está listo (ver la invariante
+    -- de la cabecera): IsReady() y Resolve() dependen solo de esta variable.
+    local index = nil
 
     local self = {}
 
@@ -104,10 +127,6 @@ local function NewResolver(registry, localization)
     -- (idioma, ID); no comprueba que el ID exista (lo hace Validate, así que el orden de carga
     -- de los ficheros no importa).
     function self:AddAlias(lang, id, alias)
-        -- Cambiar los alias invalida el índice: hasta que se reconstruya (Init o Rebuild),
-        -- Resolve devuelve "not_ready" en vez de resolver con datos desfasados.
-        ready = false
-        index = nil
         if type(lang) ~= "string" or lang == "" then
             return Reject(lang, id, alias, "Resolver:AddAlias: el idioma debe ser una cadena no vacía")
         end
@@ -127,6 +146,10 @@ local function NewResolver(registry, localization)
         end
         aliasSeen[seenKey] = true
         aliases[#aliases + 1] = { lang = lang, id = id, alias = alias, key = key }
+        -- Solo un alias ACEPTADO cambia los datos y por tanto invalida el índice: hasta que se
+        -- reconstruya, Resolve devuelve "not_ready" en vez de resolver con datos desfasados. Los
+        -- rechazos de arriba salen sin tocar ni los alias ni el índice.
+        index = nil
         return true
     end
 
@@ -250,32 +273,37 @@ local function NewResolver(registry, localization)
         return { ok = #errors == 0, errors = errors, warnings = warnings }
     end
 
-    -- Vuelve a construir el índice (tras cambiar Localization o los alias). Lo usa Init.
+    -- Valida y, si todo es correcto, construye el índice (el módulo queda listo). Devuelve true, o
+    -- false y el mensaje de la validación sin lanzar error. Ver el contrato en la cabecera: siempre
+    -- valida antes de construir y, si falla, descarta cualquier índice anterior.
     function self:Rebuild()
-        index = BuildIndex()
-    end
-
-    -- Inicialización (la llama Core/Init con todos los ficheros ya cargados y Localization ya
-    -- inicializada). Falla con un error descriptivo si Validate encuentra errores; en ese caso
-    -- no se construye el índice y Resolve devuelve "not_ready".
-    function self:Init()
         local report = self:Validate()
         if #report.errors > 0 then
-            ready = false
             index = nil
             local shown = {}
             for i = 1, math.min(#report.errors, 5) do
                 shown[i] = report.errors[i]
             end
-            error("Resolver: validación fallida (" .. #report.errors .. " problema(s)): "
-                .. table.concat(shown, " | ") .. (#report.errors > 5 and " | ..." or ""), 0)
+            return false, "Resolver: validación fallida (" .. #report.errors .. " problema(s)): "
+                .. table.concat(shown, " | ") .. (#report.errors > 5 and " | ..." or "")
         end
-        self:Rebuild()
-        ready = true
+        index = BuildIndex()
+        return true
     end
 
+    -- Inicialización (la llama Core/Init con todos los ficheros ya cargados y Localization ya
+    -- inicializada). Igual que Rebuild, pero lanza un error descriptivo si la validación falla; en
+    -- ese caso el módulo queda NO listo y Resolve devuelve "not_ready".
+    function self:Init()
+        local ok, message = self:Rebuild()
+        if not ok then
+            error(message, 0)
+        end
+    end
+
+    -- true si hay un índice válido, o sea, si Resolve puede responder. Ver la invariante.
     function self:IsReady()
-        return ready
+        return index ~= nil
     end
 
     return self

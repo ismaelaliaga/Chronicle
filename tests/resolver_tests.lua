@@ -361,6 +361,110 @@ res9:Rebuild()
 check("un texto de un ID que no existe nunca se resuelve (el Registry es la fuente de verdad)",
     res9:Resolve("Alfa") == "continent:alpha" and select(2, res9:Resolve("Huérfano")) == "not_found")
 
+-- ===================== Estado de preparación: invariantes (regresión) =====================
+-- Contrato: IsReady() es true si y solo si Resolve() no responde "not_ready". `coherent` lo
+-- comprueba; se aplica tras cada paso de los escenarios siguientes.
+local function coherent(r)
+    local _, why = r:Resolve("Alfa")
+    return r:IsReady() == (why ~= "not_ready")
+end
+
+local regR, locR, resR = NewWorld()
+locR:Add("esES", "continent:alpha", { name = "Alfa" })
+locR:Add("esES", "continent:beta", { name = "Beta" })
+check("estado inicial: sin Init el Resolver no está listo y Resolve responde not_ready (coherente)",
+    resR:IsReady() == false and select(2, resR:Resolve("Alfa")) == "not_ready" and coherent(resR))
+
+-- 1. Construir el índice
+resR:Init()
+check("1. tras construir el índice IsReady() es true y Resolve funciona (coherente)",
+    resR:IsReady() == true and resR:Resolve("Alfa") == "continent:alpha" and coherent(resR))
+check("1b. Init es repetible: volver a llamarlo con datos válidos deja el módulo listo",
+    pcall(resR.Init, resR) and resR:IsReady() == true and resR:Resolve("Beta") == "continent:beta")
+
+-- 2. Un alias válido modifica los datos e invalida el índice hasta reconstruir
+check("2. un alias válido se acepta, invalida el índice: IsReady() false y Resolve not_ready para todo, incluso lo anterior",
+    resR:AddAlias("esES", "continent:alpha", "Primero") == true and resR:CountAliases() == 1
+        and resR:IsReady() == false
+        and select(2, resR:Resolve("Alfa")) == "not_ready" and select(2, resR:Resolve("Primero")) == "not_ready"
+        and resR:Resolve("Alfa") == nil and coherent(resR))
+
+-- 3. Reconstruir correctamente
+local rebuilt, rebuiltMsg = resR:Rebuild()
+check("3. Rebuild satisfactorio devuelve true, deja IsReady() en true y el alias nuevo resuelve a su ID (coherente)",
+    rebuilt == true and rebuiltMsg == nil and resR:IsReady() == true and resR:Resolve("Primero") == "continent:alpha"
+        and resR:Resolve("Alfa") == "continent:alpha" and resR:Resolve("Beta") == "continent:beta" and coherent(resR))
+
+-- 4. Un alias duplicado se rechaza sin tocar nada
+local aliasesBefore, rejectedBefore = resR:CountAliases(), #resR:GetRejected()
+local dupOk = resR:AddAlias("esES", "continent:alpha", "  PRIMERO ")
+check("4. un alias duplicado se rechaza: el índice previo sigue válido, IsReady() true, resuelve igual y los alias no cambian",
+    dupOk == false and resR:IsReady() == true and resR:Resolve("Primero") == "continent:alpha"
+        and resR:Resolve("Alfa") == "continent:alpha" and resR:CountAliases() == aliasesBefore
+        and #resR:GetRejected() == rejectedBefore + 1 and coherent(resR))
+
+-- 5. Alias vacío o con datos inválidos: tampoco invalidan un índice válido
+local allRejected, stillReady = true, true
+for _, case in ipairs(badCases) do
+    if resR:AddAlias(unpack(case[2], 1, 3)) ~= false then allRejected = false end
+    if not (resR:IsReady() and resR:Resolve("Primero") == "continent:alpha" and coherent(resR)) then stillReady = false end
+end
+check("5. alias vacío, solo espacios o con datos inválidos (7 casos): todos se rechazan y tras cada uno el índice sigue válido",
+    allRejected and stillReady and resR:CountAliases() == aliasesBefore and #resR:GetRejected() == rejectedBefore + 1 + #badCases)
+check("5b. un rechazo no revoca IsReady() (describe el último Init/Rebuild), pero queda registrado y Validate ya falla",
+    resR:IsReady() == true and resR:Validate().ok == false and #resR:Validate().errors == #resR:GetRejected())
+
+-- 6. Reconstruir con datos que incumplen la validación: nunca queda listo
+local failedOk, failedMsg = resR:Rebuild()
+check("6a. Rebuild con rechazos registrados falla en modo seguro: false, mensaje descriptivo, índice descartado y NO listo",
+    failedOk == false and type(failedMsg) == "string" and failedMsg:find("Resolver: validación fallida", 1, true) ~= nil
+        and resR:IsReady() == false and select(2, resR:Resolve("Alfa")) == "not_ready" and coherent(resR))
+check("6b. repetir Rebuild no lo deja listo: no hay forma de eludir la validación",
+    resR:Rebuild() == false and resR:Rebuild() == false and resR:IsReady() == false
+        and select(2, resR:Resolve("Primero")) == "not_ready" and coherent(resR))
+check("6c. Init lanza el error de la validación y el módulo sigue NO listo",
+    (function() local ok, err = pcall(resR.Init, resR); return ok == false and tostring(err):find("Resolver: validación fallida", 1, true) ~= nil end)()
+        and resR:IsReady() == false and coherent(resR))
+
+-- El caso del defecto original: Init falla y después alguien llama a Rebuild
+local regT, locT, resT = NewWorld()
+locT:Add("esES", "continent:alpha", { name = "Alfa" })
+resT:AddAlias("esES", "continent:alpha", "")
+check("7. tras un Init() fallido, Rebuild() NO puede dejar el Resolver resolviendo con datos inválidos",
+    not pcall(resT.Init, resT) and resT:IsReady() == false and select(2, resT:Resolve("Alfa")) == "not_ready"
+        and resT:Rebuild() == false and resT:IsReady() == false and select(2, resT:Resolve("Alfa")) == "not_ready"
+        and coherent(resT))
+
+-- Un alias a una entidad inexistente se acepta (el formato es válido), invalida, y la reconstrucción falla
+local regS, locS, resS = NewWorld()
+locS:Add("esES", "continent:alpha", { name = "Alfa" })
+resS:Init()
+check("8a. un alias de formato válido pero de un ID inexistente se acepta (el orden de carga no importa) e invalida el índice",
+    resS:AddAlias("esES", "continent:fantasma", "Fantasma") == true and resS:IsReady() == false and coherent(resS))
+local okS, msgS = resS:Rebuild()
+check("8b. Rebuild con un alias a una entidad inexistente: false, el mensaje nombra el ID, y no queda listo",
+    okS == false and msgS:find("continent:fantasma", 1, true) ~= nil and resS:IsReady() == false
+        and select(2, resS:Resolve("Alfa")) == "not_ready" and coherent(resS))
+check("8c. y repetir Rebuild o fallar Init no cambia nada", resS:Rebuild() == false and not pcall(resS.Init, resS)
+    and resS:IsReady() == false and coherent(resS))
+
+-- Con los datos reales: reconstruir con datos válidos es coherente y no cambia ninguna resolución
+local rb1 = Chronicle.Resolver:Rebuild()
+check("con los datos reales: Rebuild devuelve true, IsReady() es true y las resoluciones siguen siendo las mismas",
+    rb1 == true and Chronicle.Resolver:IsReady() == true and Chronicle.Resolver:Resolve("Forjaz") == "city:ironforge"
+        and Chronicle.Resolver:Resolve("El Trono") == "subzone:the_great_forge"
+        and Chronicle.Resolver:Resolve("Ironforge") == "city:ironforge" and Chronicle.Resolver:CountAliases() == 22)
+check("ambigüedad y normalización no cambian tras reconstruir (instancia con nombre compartido)",
+    (function()
+        local _, l, r = NewWorld()
+        l:Add("esES", "zone:z1", { name = "Valle" }); l:Add("esES", "subzone:s1", { name = "VALLE" })
+        r:Init()
+        local a1 = { r:Resolve(" valle ") }
+        r:Rebuild()
+        local a2 = { r:Resolve(" valle ") }
+        return a1[2] == "ambiguous" and deepEqual(a1, a2) and r:Resolve("Valle", { type = "zone" }) == "zone:z1"
+    end)())
+
 -- ===================== Integración con el arranque =====================
 announced = Boot(function() Chronicle.Resolver:AddAlias("esES", "city:no_existe", "Ciudad fantasma") end)
 check("un alias que apunta a una entidad inexistente impide anunciar el arranque y queda diagnosticado",

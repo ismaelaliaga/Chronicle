@@ -86,8 +86,10 @@ R:Resolve("Ironforge", { type = "city" })--> "city:ironforge"
 R:Resolve("Stormwind")                   --> nil, "not_found"
 R:Resolve("Valle")                       --> nil, "ambiguous", { "subzone:s1", "zone:z1" }
 R:AddAlias("esES", "city:ironforge", "Forjaz")   --> true | false, motivo
-R:Validate()  --> { ok, errors, warnings }   R:Rebuild()   R:Init()   R:IsReady()
-R:CountAliases()   R:GetRejected()
+R:Rebuild()                              --> true | false, motivo   -- valida y construye el índice
+R:Init()                                 --> (lanza error si la validación falla)
+R:IsReady()                              --> true | false
+R:Validate()  --> { ok, errors, warnings }   R:CountAliases()   R:GetRejected()
 ```
 
 `Chronicle.Resolver.New(registry, localization)` crea instancias independientes.
@@ -98,7 +100,7 @@ Devuelve el ID, o `nil, razón[, candidatos]`:
 
 | Razón | Cuándo |
 |---|---|
-| `not_ready` | el índice aún no está construido (antes de `Init`, o tras añadir alias) |
+| `not_ready` | no hay índice válido: `Init`/`Rebuild` aún no han tenido éxito, falló la última validación, o se añadió un alias después |
 | `empty` | `text` no es cadena o queda vacío al normalizar |
 | `not_found` | ningún nombre ni alias coincide |
 | `ambiguous` | varias entidades comparten ese nombre/alias; el tercer valor son los IDs candidatos, ordenados. **Nunca se elige una al azar** |
@@ -114,8 +116,33 @@ alias (`not_found`). Quien ya tiene un ID usa `Registry:Has()`.
 1. El campo `name` de cada entidad en **todos** los idiomas registrados.
 2. Los alias añadidos con `AddAlias` (un nombre alternativo de una entidad en un idioma).
 
-El índice se construye en `Init` (o con `Rebuild`) y las consultas solo lo leen. Un nombre o alias de
-un ID que no está en el Registry no se indexa (y es error en `Validate`).
+Las consultas solo leen el índice. Un nombre o alias de un ID que no está en el Registry no se indexa (y es
+error en `Validate`).
+
+### Estado de preparación: `Init`, `Rebuild`, `AddAlias` e `IsReady`
+
+**Invariante única:** `IsReady()` es `true` si y solo si existe un índice, y un índice solo existe si se
+construyó **después** de superar `Validate`. No hay una bandera aparte que pueda contradecirlo, así que
+`IsReady() == false` ⇔ `Resolve()` devuelve `not_ready`.
+
+| Operación | Efecto |
+|---|---|
+| `Init()` | Valida, construye el índice y deja el módulo listo. Si la validación falla, **lanza** un error descriptivo y el módulo queda no listo. Es lo que llama `Core/Init`. |
+| `Rebuild()` | Lo mismo que `Init()` pero sin lanzar: devuelve `true`, o `false` y el mensaje de la validación. **Siempre valida antes de construir**, así que no hay forma de dejar el módulo listo saltándose la validación. |
+| `AddAlias()` válido | Añade el alias e **invalida el índice**: `IsReady()` pasa a `false` y `Resolve()` devuelve `not_ready` hasta el siguiente `Init`/`Rebuild` satisfactorio. |
+| `AddAlias()` rechazado | **No cambia** ni los alias aceptados ni el índice: si había uno válido, sigue válido y listo. El rechazo queda en `GetRejected()`. |
+| `Validate()` | Solo informa; nunca cambia el estado de preparación. |
+
+**`Rebuild()` falla en modo seguro.** Si devuelve `false`, el índice anterior (si lo había) se **descarta** y el
+módulo queda no listo, porque lo que lo respaldaba (alias, Registry o Localization) ya no supera la
+validación. Llamarlo otra vez no lo «arregla»: solo tiene éxito si los datos son válidos. Esto cierra un
+defecto de la primera versión de la fase, en la que `Rebuild()` construía el índice sin validar: tras un
+`Init()` fallido, un `Rebuild()` dejaba `Resolve()` funcionando con datos inválidos aunque `IsReady()` fuera
+`false`.
+
+**Un rechazo no revoca `IsReady()`.** `IsReady()` describe el resultado del último `Init`/`Rebuild`. Un
+`AddAlias` rechazado posterior es un error de datos que se anota y hará fallar la **siguiente** validación
+(`Init`/`Rebuild`/`Validate`), pero no tumba por sí solo un índice ya válido.
 
 ### Normalización
 
@@ -202,11 +229,14 @@ cd tests
 npm test
 ```
 
-Resultado de la ejecución final: **465 superadas, 0 fallidas, código de salida 0** (78 de la Fase 1, 167 de la
-Fase 2, 68 de la Fase 3 y 152 nuevas de la Fase 4). La batería cubre las fases 1 a 4. Se
-comprobó además que las pruebas nuevas detectan defectos reales (elegir el primer candidato de una
-ambigüedad, coincidencia por prefijo, tratar `""` como ausente, fallback por entrada entera, alterar un
-carácter de un texto, quitar un alias, quitar el Resolver de los módulos requeridos, no pasar a minúsculas).
+Resultado de la ejecución final: **482 superadas, 0 fallidas, código de salida 0** (78 de la Fase 1, 167 de la
+Fase 2, 68 de la Fase 3 y 169 de la Fase 4: 152 de la entrega inicial y 17 de regresión del estado del
+Resolver). La batería cubre las fases 1 a 4. Se comprobó además que las pruebas detectan defectos reales
+(elegir el primer candidato de una ambigüedad, coincidencia por prefijo, tratar `""` como ausente, fallback
+por entrada entera, alterar un carácter de un texto, quitar un alias, quitar el Resolver de los módulos
+requeridos, no pasar a minúsculas) y, para la corrección del estado del Resolver, el `Resolver.lua` de la
+entrega inicial y cada defecto por separado (invalidar antes de validar, `Rebuild` sin validar, `Rebuild`
+fallido que conserva el índice).
 
 ### Qué se ha verificado y qué no
 
@@ -229,8 +259,9 @@ que un fallo de un módulo requerido impide anunciar el arranque.
 - **No hay selección de idioma por el cliente ni por el jugador.** El predeterminado es `esES` y se puede
   cambiar con `SetDefaultLanguage`, pero nada lo hace todavía ni se guarda en ninguna parte. Persistir la
   elección (si procede) será decisión de otra fase.
-- **El índice del Resolver no se actualiza solo**: tras añadir textos o alias después de `Init`, hay que
-  llamar a `Rebuild()`/`Init()`. Mientras tanto, `AddAlias` hace que `Resolve` devuelva `not_ready`.
+- **El índice del Resolver no se actualiza solo**: tras añadir textos a Localization o alias después de
+  `Init`, hay que llamar a `Rebuild()`/`Init()`. Un alias válido invalida el índice (`not_ready`) hasta
+  entonces; los textos añadidos a Localization, en cambio, no invalidan nada y no se ven hasta reconstruir.
 - **Sin resolución por contexto**: no hay filtro por padre (p. ej. «la subzona que se llama X dentro de
   esta zona»); solo por tipo. Hoy no hace falta (no hay ambigüedades), y queda para cuando Discovery lo pida.
 - **Los nombres inglés/español de una misma entidad conviven en `esES`**: el nombre de la ciudad es
