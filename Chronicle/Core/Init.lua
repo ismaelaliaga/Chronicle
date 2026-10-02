@@ -9,8 +9,12 @@ Chronicle = Chronicle or {}
 -- ficheros del .toc.
 --
 -- POLÍTICA DE INICIALIZACIÓN
---   * Cada módulo se intenta inicializar en su turno, aunque otro haya fallado: los
---     módulos actuales son independientes entre sí.
+--   * Cada módulo se intenta inicializar en su turno, aunque otro haya fallado, salvo que
+--     declare `requires` (módulos de los que depende): si alguno de ellos no quedó
+--     inicializado, ese módulo NO se intenta. Queda en Init.skipped[nombre] (no en
+--     Init.failed, que solo lista las causas: el módulo del que depende ya está ahí) y, si
+--     es requerido, Init.ready es false. Así un módulo nunca se inicializa antes de que sus
+--     dependencias estén listas.
 --   * Todo fallo queda en Init.failed[nombre] (texto del error) y se comunica por
 --     geterrorhandler(). Nunca se convierte en un éxito silencioso.
 --   * Cada módulo es `required` o no. Init.ready solo es true si TODOS los requeridos se
@@ -36,12 +40,16 @@ local MODULES = {
     { name = "Registry", required = true }, -- no se da por listo si los datos no superan su validación
     { name = "Localization", required = true }, -- tras Registry: valida que sus textos son de entidades que existen
     { name = "Resolver", required = true }, -- tras Localization: construye el índice de nombres y alias
+    -- Discovery lee y guarda el progreso con State y valida entidades con el Registry: no se intenta si
+    -- alguno de los dos no está listo.
+    { name = "Discovery", required = true, requires = { "State", "Registry" } },
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él
 }
 
 Init.initialized = false -- ya se ha hecho el (único) intento de arranque
 Init.ready = false -- los módulos requeridos están inicializados
 Init.failed = {} -- nombre de módulo -> texto del error
+Init.skipped = {} -- nombre de módulo -> por qué no se intentó (una dependencia no está lista)
 
 -- Comunica un fallo sin depender de ningún módulo de Chronicle (ni siquiera de Utils o
 -- Events): solo de lo que provee el cliente, y con respaldo si ni eso existe.
@@ -107,8 +115,24 @@ function Init:Run()
     Chronicle.version = ReadVersion()
 
     local ready = true
+    local done = {} -- módulos que quedaron inicializados
     for _, spec in ipairs(MODULES) do
-        if not InitModule(spec.name) and spec.required then
+        local blockedBy
+        for _, dependency in ipairs(spec.requires or {}) do
+            if not done[dependency] then
+                blockedBy = dependency
+                break
+            end
+        end
+
+        if blockedBy then
+            Init.skipped[spec.name] = "no se intentó: depende de '" .. blockedBy .. "', que no está inicializado"
+            if spec.required then
+                ready = false
+            end
+        elseif InitModule(spec.name) then
+            done[spec.name] = true
+        elseif spec.required then
             ready = false
         end
     end

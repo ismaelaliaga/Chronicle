@@ -408,12 +408,15 @@ check("todos los ficheros de presentación se cargan antes de Core/Init.lua",
         end
         return true
     end)())
-check("ningún fichero de Localization ni de Services referencia ChronicleCharDB ni Chronicle.State en su código",
+-- Fase 5: Services/Discovery.lua usa Chronicle.State como API de persistencia (es su cometido), así que
+-- queda exento de la mitad "Chronicle.State"; la prohibición de ChronicleCharDB sigue valiendo para todos.
+check("ningún fichero de Localization ni de Services referencia ChronicleCharDB en su código, ni Chronicle.State salvo Services/Discovery.lua",
     (function()
         for _, file in ipairs(ADDON_FILES) do
             if file.name:find("^Localization/") or file.name:find("^Services/") then
                 for line in file.source:gmatch("[^\n]+") do
-                    if not line:match("^%s*%-%-") and (line:find("ChronicleCharDB", 1, true) or line:find("Chronicle.State", 1, true)) then
+                    if not line:match("^%s*%-%-") and (line:find("ChronicleCharDB", 1, true)
+                        or (file.name ~= "Services/Discovery.lua" and line:find("Chronicle.State", 1, true))) then
                         return false, file.name
                     end
                 end

@@ -190,7 +190,7 @@ sin textos en Localization. Advertencias: nombres o alias ambiguos.
 ## Integración con el arranque
 
 `Core/Init.lua` inicializa, en este orden: `Events`, `State`, `Registry`, **`Localization`**,
-**`Resolver`**, `Slash`. Localization y Resolver son **módulos requeridos**: si fallan, `Init.ready` es
+**`Resolver`**, `Slash`. (Desde la Fase 5 también `Discovery`, tras `Resolver`; ver `docs/fase5_discovery.md`.) Localization y Resolver son **módulos requeridos**: si fallan, `Init.ready` es
 `false`, el error queda en `Init.failed` y **no** se anuncia `Chronicle.Initialized`. Cada módulo se sigue
 intentando aunque otro falle. No hay nuevas SavedVariables y no se escribe nada en `ChronicleCharDB`.
 
