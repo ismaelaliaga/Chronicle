@@ -5,11 +5,13 @@
 ## Version: 0.2.0-dev
 ## SavedVariablesPerCharacter: ChronicleCharDB
 
-# Orden de carga. Capas: Core -> Data -> (futuros Services -> UI). Cada fichero solo
-# depende de los anteriores. Core/Init.lua va el ULTIMO: arranca los modulos, asi que todos
-# deben estar ya definidos. Los datos van entre Data/Registry.lua y Core/Init.lua: primero las
-# entidades (necesitan Chronicle.Registry) y luego los textos. Las entidades no dependen del
-# orden entre si: las referencias las valida Registry:Validate() al arrancar.
+# Orden de carga. Capas: Core -> Data -> Localization -> Services -> (futura UI). Cada fichero
+# solo depende de los anteriores. Core/Init.lua va el ULTIMO: arranca los modulos, asi que todos
+# deben estar ya definidos.
+#   - Los datos de entidades necesitan Chronicle.Registry y no dependen del orden entre si: las
+#     referencias las valida Registry:Validate() al arrancar.
+#   - Localization/Localization.lua y Services/Resolver.lua van ANTES de los ficheros de
+#     localization/esES, que los usan para registrar textos y alias.
 Core/Utils.lua
 Core/Events.lua
 Core/State.lua
@@ -19,8 +21,11 @@ Data/Registry.lua
 Data/Entities/Geography.lua
 Data/Entities/Subzones.lua
 Data/Entities/Npcs.lua
-Data/Text/EasternKingdoms.lua
-Data/Text/DunMorogh.lua
-Data/Text/LochModan.lua
-Data/Text/Ironforge.lua
+Localization/Localization.lua
+Services/Resolver.lua
+Localization/esES/EasternKingdoms.lua
+Localization/esES/DunMorogh.lua
+Localization/esES/LochModan.lua
+Localization/esES/Ironforge.lua
+Localization/esES/Aliases.lua
 Core/Init.lua

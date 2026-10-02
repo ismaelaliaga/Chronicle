@@ -4,6 +4,7 @@
 -- de los datos del addon ORIGINAL, obtenida ejecutando sus ficheros. Los textos migrados se
 -- comparan con == contra esos valores, sin normalizar espacios, mayúsculas ni acentos.
 -- Los IDs esperados se escriben a mano aquí, de forma independiente del generador de datos.
+-- (Fase 4: los textos se leen ahora de Chronicle.Localization, idioma esES, y no de LegacyText.)
 
 local Ref = LegacyReference
 
@@ -368,8 +369,19 @@ check("no se usan nameKey, descriptionKey ni textKey: la clave de presentación 
     end)())
 
 -- ===================== Textos preservados literalmente =====================
-local Text = Chronicle.LegacyText
-check("existe el contenedor pasivo Chronicle.LegacyText", type(Text) == "table")
+-- Desde la Fase 4 los textos viven en Chronicle.Localization (idioma esES). Se reconstruye aquí
+-- una tabla id -> campos con GetExact (sin fallback) para comparar con la referencia original
+-- exactamente igual que antes.
+local Loc = Chronicle.Localization
+local Text = {}
+for _, id in ipairs(Loc:GetIds("esES")) do
+    Text[id] = {}
+    for _, field in ipairs({ "name", "description", "hint", "race", "role" }) do
+        Text[id][field] = Loc:GetExact(id, field, "esES")
+    end
+end
+check("los textos migrados están registrados en Localization (esES) y el contenedor provisional LegacyText ya no existe",
+    Loc:HasLanguage("esES") and Chronicle.LegacyText == nil)
 
 local function sameText(id, field, expected)
     local entry = Text[id]
@@ -479,7 +491,7 @@ check("no se han creado NPC candidatos de los TODO de la fuente (sin npcID ni da
 -- ===================== Independencia del orden de carga =====================
 -- Los ficheros de datos no dependen de cargarse en un orden concreto: el Registry acepta las
 -- entidades y es Registry:Validate() quien comprueba las referencias. Se cargan al revés.
-LoadAddon({ "^Data/Entities/", "^Data/Text/" })
+LoadAddon({ "^Data/Entities/", "^Localization/esES/" })
 local byName = {}
 for _, file in ipairs(ADDON_FILES) do byName[file.name] = file end
 for _, name in ipairs({ "Data/Entities/Npcs.lua", "Data/Entities/Subzones.lua", "Data/Entities/Geography.lua" }) do
@@ -489,7 +501,7 @@ local reversed = Chronicle.Registry:Validate()
 check("cargando los ficheros de entidades en orden inverso (NPC, subzonas, geografía) el conjunto sigue siendo válido",
     Chronicle.Registry:Count() == 53 and reversed.ok == true and #reversed.errors == 0 and #Chronicle.Registry:GetRejected() == 0)
 
-LoadAddon({ "^Data/Entities/", "^Data/Text/" })
+LoadAddon({ "^Data/Entities/", "^Localization/esES/" })
 assert(load(byName["Data/Entities/Npcs.lua"].source, "@Npcs"))()
 local partial = Chronicle.Registry:Validate()
 check("con solo los NPC cargados, Validate detecta las referencias a subzonas que aún no existen",
@@ -543,7 +555,7 @@ check("control: una entidad extra válida, con referencias que existen, NO impid
 check("los ficheros de datos no referencian ChronicleCharDB ni Chronicle.State en su código",
     (function()
         for _, file in ipairs(ADDON_FILES) do
-            if file.name:find("^Data/Entities/") or file.name:find("^Data/Text/") then
+            if file.name:find("^Data/Entities/") or file.name:find("^Localization/esES/") then
                 for line in file.source:gmatch("[^\n]+") do
                     if not line:match("^%s*%-%-") and (line:find("ChronicleCharDB", 1, true)
                         or line:find("Chronicle.State", 1, true)) then

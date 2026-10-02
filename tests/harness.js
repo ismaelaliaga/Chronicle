@@ -41,6 +41,8 @@ const TEST_FILES = [
     "schema_tests.lua",
     "registry_tests.lua",
     "data_tests.lua",
+    "localization_tests.lua",
+    "resolver_tests.lua",
 ];
 const testFileSources = TEST_FILES.map((name) => {
     const src = fs.readFileSync(path.join(__dirname, name), "utf8");
@@ -60,7 +62,7 @@ ${fileSources}
 --
 -- exclude (opcional): patrón Lua, o lista de patrones, de ficheros del .toc que NO se
 -- cargan. Lo usan las pruebas del Registry para trabajar sin los datos reales (Data/Entities
--- y Data/Text) y comprobar el Registry con sus propias entidades de ejemplo.
+-- y Localization/esES) y comprobar el Registry con sus propias entidades de ejemplo.
 function LoadAddon(exclude)
     local patterns = type(exclude) == "string" and { exclude } or exclude or {}
     Chronicle = nil

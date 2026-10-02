@@ -2,9 +2,9 @@
 -- Usan entidades de ejemplo con IDs ilustrativos: no son datos del addon (Fase 3).
 
 -- Estas pruebas comprueban el Registry con entidades de ejemplo propias, así que cargan el
--- addon SIN los ficheros de datos reales (Fase 3): el Registry por defecto parte vacío. Las
+-- addon SIN los ficheros de datos reales (Fases 3 y 4: Data/Entities y Localization/esES): el Registry por defecto parte vacío. Las
 -- pruebas con los datos reales y su arranque están en data_tests.lua.
-local NO_DATA = { "^Data/Entities/", "^Data/Text/" }
+local NO_DATA = { "^Data/Entities/", "^Localization/esES/" }
 
 LoadAddon(NO_DATA)
 local Schema = Chronicle.Schema

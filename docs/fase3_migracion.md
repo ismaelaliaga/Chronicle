@@ -3,6 +3,11 @@
 Alcance: Dun Morogh, Loch Modan y Forjaz (Ironforge). Solo datos: nada de localización,
 descubrimiento, interfaz ni navegación.
 
+> **Actualización de la Fase 4.** Los textos ya no están en `Data/Text/` ni en `Chronicle.LegacyText`: se
+> movieron, sin cambiar ninguna cadena, a `Localization/esES/` y se registran con
+> `Localization:Add("esES", id, {...})`. Ver `docs/fase4_localization_resolver.md`. Lo de abajo describe la
+> Fase 3 tal como se entregó.
+
 ## Fuentes
 
 Addon original (solo lectura; idéntico a su ZIP de auditoría, 35 ficheros comparados byte a byte):
