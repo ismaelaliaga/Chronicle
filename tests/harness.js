@@ -34,7 +34,14 @@ const fileSources = tocFiles
     .join(",\n");
 
 // Ficheros de pruebas, en orden. support.lua primero: define los helpers comunes.
-const TEST_FILES = ["support.lua", "core_tests.lua", "schema_tests.lua", "registry_tests.lua"];
+const TEST_FILES = [
+    "support.lua",
+    "fixtures/legacy_reference.lua", // datos del addon original (referencia de la Fase 3)
+    "core_tests.lua",
+    "schema_tests.lua",
+    "registry_tests.lua",
+    "data_tests.lua",
+];
 const testFileSources = TEST_FILES.map((name) => {
     const src = fs.readFileSync(path.join(__dirname, name), "utf8");
     return `{ name = "tests/${name}", source = ${toLuaLongBracket(src)} }`;
@@ -50,12 +57,23 @@ ${fileSources}
 -- Simula una carga del addon: ejecuta cada fichero del .toc en orden. NO dispara
 -- ADDON_LOADED (eso lo hace cada prueba cuando quiere), y deja ChronicleCharDB como
 -- esté, igual que el cliente real, que lo rellena antes de ejecutar ningún fichero.
-function LoadAddon()
+--
+-- exclude (opcional): patrón Lua, o lista de patrones, de ficheros del .toc que NO se
+-- cargan. Lo usan las pruebas del Registry para trabajar sin los datos reales (Data/Entities
+-- y Data/Text) y comprobar el Registry con sus propias entidades de ejemplo.
+function LoadAddon(exclude)
+    local patterns = type(exclude) == "string" and { exclude } or exclude or {}
     Chronicle = nil
     ResetMockRuntime()
     for _, file in ipairs(ADDON_FILES) do
-        local chunk = assert(load(file.source, "@" .. file.name))
-        chunk()
+        local skip = false
+        for _, pattern in ipairs(patterns) do
+            if file.name:find(pattern) then skip = true end
+        end
+        if not skip then
+            local chunk = assert(load(file.source, "@" .. file.name))
+            chunk()
+        end
     end
 end
 

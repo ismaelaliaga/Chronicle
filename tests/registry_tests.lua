@@ -1,7 +1,12 @@
 -- Escenarios de prueba del Registry (Fase 2) y de su integración con el arranque del Core.
 -- Usan entidades de ejemplo con IDs ilustrativos: no son datos del addon (Fase 3).
 
-LoadAddon()
+-- Estas pruebas comprueban el Registry con entidades de ejemplo propias, así que cargan el
+-- addon SIN los ficheros de datos reales (Fase 3): el Registry por defecto parte vacío. Las
+-- pruebas con los datos reales y su arranque están en data_tests.lua.
+local NO_DATA = { "^Data/Entities/", "^Data/Text/" }
+
+LoadAddon(NO_DATA)
 local Schema = Chronicle.Schema
 
 local function copy(t) return Chronicle.Utils.DeepCopy(t) end
@@ -267,7 +272,7 @@ check("con los tipos por defecto no es posible construir un ciclo de parent",
 
 -- ===================== Integración con el arranque del Core =====================
 local function Boot(prepare)
-    LoadAddon()
+    LoadAddon(NO_DATA)
     ChronicleCharDB = nil
     if prepare then prepare() end
     local announced = 0
@@ -283,7 +288,7 @@ check("arranque con Registry vacío: Init.ready, sin fallos y se anuncia el arra
     Chronicle.Init.ready == true and next(Chronicle.Init.failed) == nil and announced == 1)
 check("tras el arranque el Registry por defecto está validado", Chronicle.Registry:IsValidated() == true)
 check("antes de Init el Registry no está validado", (function()
-    LoadAddon()
+    LoadAddon(NO_DATA)
     return Chronicle.Registry:IsValidated() == false
 end)())
 
