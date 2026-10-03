@@ -115,7 +115,12 @@ local DEFAULT_DEFINITIONS = {
         },
     },
     -- Textura de relleno plano que usan los separadores (se tiñe con SetVertexColor).
-    textures = { SOLID = "Interface\\Buttons\\WHITE8X8" },
+    textures = {
+        SOLID = "Interface\\Buttons\\WHITE8X8",
+        -- Botón del minimapa (Fase 12): icono y borde del propio juego, los mismos del addon original.
+        MINIMAP_ICON = "Interface\\Icons\\INV_Misc_Book_09",
+        MINIMAP_BORDER = "Interface\\Minimap\\MiniMap-TrackingBorder",
+    },
 }
 
 -- Lo que los módulos de UI actuales (Popup) dan por existente. Init falla si falta algo de esto.

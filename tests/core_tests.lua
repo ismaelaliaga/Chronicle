@@ -309,9 +309,9 @@ SlashCmdList["CHRONICLE"]("   ")
 check("/chronicle con solo espacios equivale a /chronicle", contains(ChatLog, "Core activo"))
 
 ChatLog = {}
-SlashCmdList["CHRONICLE"]("where")
-check("un subcomando aún no implementado (where) se avisa como desconocido y no falla",
-    contains(ChatLog, "comando desconocido: where"))
+SlashCmdList["CHRONICLE"]("reset")
+check("un subcomando no implementado (reset: pospuesto, Discovery no tiene reinicio) se avisa como desconocido y no falla",
+    contains(ChatLog, "comando desconocido: reset"))
 
 local received
 Chronicle.Slash:Register("Eco", function(args) received = args end)

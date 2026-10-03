@@ -138,6 +138,16 @@ function FrameMethods:GetScrollChild() return self.scrollChild end
 function FrameMethods:EnableMouseWheel(enabled) self.mouseWheel = enabled end
 function FrameMethods:SetVerticalScroll(offset) self.verticalScroll = offset end
 function FrameMethods:GetVerticalScroll() return self.verticalScroll or 0 end
+-- Casillas (CheckButton): solo ese tipo tiene SetChecked/GetChecked.
+local CheckButtonMethods = setmetatable({}, { __index = FrameMethods })
+CheckButtonMethods.__index = CheckButtonMethods
+function CheckButtonMethods:SetChecked(value) self.checked = value and true or false end
+function CheckButtonMethods:GetChecked() return self.checked == true end
+
+function FrameMethods:RegisterForClicks(...) self.clicks = { ... } end
+function FrameMethods:SetFrameLevel(level) self.level = level end
+function FrameMethods:GetCenter() return self.center and self.center[1], self.center and self.center[2] end
+function FrameMethods:GetEffectiveScale() return self.scale or 1 end
 -- Botones: Click() ejecuta el OnClick del botón, como un clic del usuario.
 function FrameMethods:Click()
     local onClick = self.__scripts and self.__scripts.OnClick
@@ -189,7 +199,7 @@ function ModelMethods:ClearModel() self.displayInfo, self.creatureID, self.creat
 
 function CreateFrame(kind, name, parent, template)
     local frame = setmetatable({ kind = kind, name = name, parent = parent, template = template, points = {} },
-        kind == "PlayerModel" and ModelMethods or FrameMethods)
+        kind == "PlayerModel" and ModelMethods or (kind == "CheckButton" and CheckButtonMethods or FrameMethods))
     if name then
         _G[name] = frame
         NamedGlobals[#NamedGlobals + 1] = name
@@ -214,6 +224,37 @@ end
 
 -- Vuelve a un "cliente recién arrancado": sin frames registrados, chat vacío, sin
 -- comandos slash. NO toca ChronicleCharDB (es lo único que persiste entre sesiones).
+-- APIs del cliente que usan Minimap, Trivia, FreshCharacterCheck y las opciones. Se reinician con cada "cliente recién arrancado".
+-- MockClient es lo que las pruebas ajustan; las funciones leen de ahí. No sustituyen probar en el juego.
+local function ResetClientApis()
+    MockClient = { time = 1000, cursor = { 0, 0 }, level = 1, onTaxi = false, playedRequests = 0, timers = {}, optionCategories = {},
+        openedCategories = {}, tooltipLines = {} }
+    Minimap = CreateFrame("Frame", nil, UIParent)
+    Minimap.center = { 500, 400 }
+    Minimap.shown = true
+    GameTooltip = {
+        SetOwner = function(self, owner) MockClient.tooltipOwner = owner; MockClient.tooltipLines = {} end,
+        AddLine = function(self, text) table.insert(MockClient.tooltipLines, text) end,
+        Show = function() MockClient.tooltipShown = true end,
+        Hide = function() MockClient.tooltipShown = false end,
+    }
+    function GetCursorPosition() return MockClient.cursor[1], MockClient.cursor[2] end
+    function GetTime() return MockClient.time end
+    function UnitLevel() return MockClient.level end
+    function UnitOnTaxi() return MockClient.onTaxi end
+    function RequestTimePlayed() MockClient.playedRequests = MockClient.playedRequests + 1 end
+    C_Timer = { After = function(seconds, fn) table.insert(MockClient.timers, { seconds = seconds, fn = fn }) end }
+    function InterfaceOptions_AddCategory(panel) table.insert(MockClient.optionCategories, panel) end
+    function InterfaceOptionsFrame_OpenToCategory(panel) table.insert(MockClient.openedCategories, panel) end
+    Settings = nil
+end
+-- Ejecuta (una vez) los temporizadores pendientes, como haría el cliente cuando pase el tiempo.
+function RunMockTimers()
+    local pending = MockClient.timers
+    MockClient.timers = {}
+    for _, timer in ipairs(pending) do timer.fn() end
+end
+
 function ResetMockRuntime()
     for _, name in ipairs(NamedGlobals) do _G[name] = nil end
     NamedGlobals = {}
@@ -225,6 +266,7 @@ function ResetMockRuntime()
     ReportedErrors = {}
     SlashCmdList = {}
     SLASH_CHRONICLE1 = nil
+    ResetClientApis()
 end
 
 -- Estado inicial (la primera carga, antes de cualquier ResetMockRuntime).

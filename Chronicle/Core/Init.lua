@@ -57,7 +57,15 @@ local MODULES = {
     -- Codex: ventana principal con navegación y páginas (Fases 8-9). Opcional por la misma razón que el Popup. Depende de Theme y,
     -- ahora que muestra el catálogo, de Registry y Localization (requeridos: si fallan, el Codex ni se intenta).
     { name = "Codex", required = false, requires = { "Theme", "Registry", "Localization" } },
+    -- Fase 12: integraciones OPCIONALES. Ninguna es requerida: si falla, queda en Init.failed y el resto (Discovery, Codex, Popup...) funciona.
+    -- `requires` solo nombra lo que el módulo NO puede usar sin esa pieza; el resto de dependencias (Popup, Codex...) se comprueba al usarlas.
+    { name = "Options", required = false, requires = { "State" } }, -- preferencias, guardadas con State
+    { name = "Trivia", required = false, requires = { "Options" } },
+    { name = "FreshCharacterCheck", required = false, requires = { "State", "Discovery" } },
+    { name = "OptionsPanel", required = false, requires = { "Options", "Theme" } },
+    { name = "MinimapButton", required = false, requires = { "Theme" } }, -- sin Options usa la posición predeterminada y no la guarda
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él
+    { name = "Commands", required = false, requires = { "Slash" } }, -- los subcomandos de /chronicle (Fase 12)
 }
 
 Init.initialized = false -- ya se ha hecho el (único) intento de arranque

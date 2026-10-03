@@ -122,7 +122,8 @@ check("1f. se crean exactamente dos frames de Popup: la ventana y su botón de c
     end)() and (function()
         for _, entry in ipairs(created) do
             -- (el Codex, otro módulo, crea al arrancar su propia ventana con nombre: no es del Popup)
-            if entry.name and entry.name ~= FRAME_NAME and entry.name ~= "ChronicleCodexFrame" then return false end
+            if entry.name and entry.name ~= FRAME_NAME and entry.name ~= "ChronicleCodexFrame" and entry.name ~= "ChronicleOptionsPanel"
+                and entry.name ~= "ChronicleMinimapButton" then return false end
         end
         return true
     end)())

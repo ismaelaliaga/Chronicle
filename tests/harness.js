@@ -37,6 +37,7 @@ const fileSources = tocFiles
 const TEST_FILES = [
     "support.lua",
     "fixtures/legacy_reference.lua", // datos del addon original (referencia de la Fase 3)
+    "fixtures/legacy_trivia.lua", // textos de Trivia del addon original (referencia de la Fase 12)
     "core_tests.lua",
     "schema_tests.lua",
     "registry_tests.lua",
@@ -53,6 +54,7 @@ const TEST_FILES = [
     "codex_nav_tests.lua",
     "codex_discovery_tests.lua",
     "codex_content_tests.lua",
+    "integrations_tests.lua",
 ];
 const testFileSources = TEST_FILES.map((name) => {
     const src = fs.readFileSync(path.join(__dirname, name), "utf8");
