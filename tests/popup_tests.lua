@@ -13,7 +13,7 @@ local function Boot(prepare)
     created = {}
     CreateFrame = function(kind, name, parent, template)
         local frame = realCreateFrame(kind, name, parent, template)
-        created[#created + 1] = { kind = kind, name = name, template = template, frame = frame }
+        created[#created + 1] = { kind = kind, name = name, template = template, frame = frame, parent = parent }
         return frame
     end
     LoadAddon()
@@ -37,7 +37,9 @@ local function windowOf() return _G[FRAME_NAME] end
 local function titleOf(frame) return frame.children[1] end
 local function bodyOf(frame) return frame.children[3] end
 local function closeButton()
-    for _, entry in ipairs(created) do if entry.template == "UIPanelCloseButton" then return entry.frame end end
+    for _, entry in ipairs(created) do
+        if entry.template == "UIPanelCloseButton" and entry.parent == windowOf() then return entry.frame end
+    end
 end
 local function countIn(list, value)
     local n = 0
@@ -113,11 +115,14 @@ check("1e. la ventana está registrada en UISpecialFrames una sola vez (Escape l
 check("1f. se crean exactamente dos frames de Popup: la ventana y su botón de cierre estándar; el único nombre global es el de la ventana",
     named(FRAME_NAME) == 1 and (function()
         local n = 0
-        for _, entry in ipairs(created) do if entry.template == "UIPanelCloseButton" then n = n + 1 end end
+        for _, entry in ipairs(created) do
+            if entry.template == "UIPanelCloseButton" and entry.parent == windowOf() then n = n + 1 end
+        end
         return n == 1
     end)() and (function()
         for _, entry in ipairs(created) do
-            if entry.name and entry.name ~= FRAME_NAME then return false end
+            -- (el Codex, otro módulo, crea al arrancar su propia ventana con nombre: no es del Popup)
+            if entry.name and entry.name ~= FRAME_NAME and entry.name ~= "ChronicleCodexFrame" then return false end
         end
         return true
     end)())

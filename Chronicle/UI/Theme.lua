@@ -74,8 +74,18 @@ local DEFAULT_DEFINITIONS = {
         POPUP_LINE_SPACING = 3,
         POPUP_DEFAULT_OFFSET_Y = -160, -- posición por defecto: arriba y centrado, 160 bajo el borde superior
         POPUP_CLOSE_OFFSET = -2,
+        -- Ventana principal del Codex (Fase 8). Proporción 3:2 apaisada, la de una ventana de consulta; la navegación ocupa
+        -- algo menos de un tercio del ancho para dejar sitio al contenido. INSET deja libre el borde del backdrop WINDOW
+        -- (sus insets son 11-12); HEADER_HEIGHT es el alto del encabezado (título y botón de cierre).
+        CODEX_WIDTH = 840,
+        CODEX_HEIGHT = 560,
+        CODEX_INSET = 14,
+        CODEX_HEADER_HEIGHT = 40,
+        CODEX_NAV_WIDTH = 240,
+        CODEX_DIVIDER_THICKNESS = 1,
     },
-    strata = { POPUP = "HIGH" },
+    -- La ventana del Codex queda POR DEBAJO del popup (HIGH) para que un aviso nunca quede tapado por ella.
+    strata = { POPUP = "HIGH", CODEX = "MEDIUM" },
     -- Texturas del propio juego (las del popup original y la maqueta del Códex).
     backdrops = {
         WINDOW = {

@@ -54,6 +54,8 @@ local MODULES = {
     -- Popup debe comprobar Popup:IsReady(). Popup depende de Theme: si Theme falla, Popup no se intenta.
     { name = "Theme", required = false },
     { name = "Popup", required = false, requires = { "Theme" } },
+    -- Codex: ventana principal (solo la estructura visual en la Fase 8). Opcional por la misma razón que el Popup; depende de Theme.
+    { name = "Codex", required = false, requires = { "Theme" } },
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él
 }
 
