@@ -152,19 +152,20 @@ cd tests
 npm test
 ```
 
-Resultado de la ejecución final: **986 superadas, 0 fallidas, código de salida 0** (811 de las fases 1 a 6, 66 de Theme en
-`theme_tests.lua` y 109 de Popup en `popup_tests.lua`). Cubren: la API de Theme y sus tipos, los valores tomados del original, las
+Resultado de la ejecución final: **998 superadas, 0 fallidas, código de salida 0** (811 de las fases 1 a 6, 66 de Theme en
+`theme_tests.lua` y 121 de Popup en `popup_tests.lua`). Cubren: la API de Theme y sus tipos, los valores tomados del original, las
 copias, las definiciones inválidas, que los consumidores no dupliquen constantes visuales; el arranque, la idempotencia de `Init`,
 mostrar/actualizar/cerrar, Escape y la X, contenido vacío e inválido, la cola (orden, límite, cierre y reapertura, `CloseAll`), posición y
 arrastre, fallos de la interfaz en `Init` y en uso, el aislamiento (nada de State/Discovery/`ChronicleCharDB`, ni temporizadores ni
-eventos del cliente) y la integración con `Core/Init`.
+eventos del cliente), la integración con `Core/Init` y la limpieza del frame parcial tras un `Init` fallido.
 
 ### Mutaciones probadas (restauradas después)
 
 Se introdujo cada defecto de forma aislada y se comprobó que `npm test` fallaba. **Criterio estricto:** una mutación solo cuenta
 como detectada si produce al menos una aserción `[FAIL]` clara; un fallo del intérprete por una excepción de Lua no cuenta. Tras
 cada mutación se restauró el fichero y al final se verificó que todos quedaron idénticos a la versión final.
-**39 mutaciones, las 39 detectadas con aserciones claras y sin ninguna excepción posterior.**
+**50 mutaciones, las 50 detectadas con aserciones claras y sin ninguna excepción posterior** (las 39 de la batería original, relanzadas
+contra el código final, más 11 de la corrección de limpieza del `Init` fallido).
 
 - **Popup (26):** `Init` no idempotente; un `Init` fallido que reintenta y duplica la ventana; `Enqueue` que pisa lo visible; cola LIFO;
   cola que duplica entradas; cola sin límite; cerrar sin avanzar la cola; `CloseAll` sin vaciar la cola; aceptar contenido vacío;
@@ -177,12 +178,17 @@ cada mutación se restauró el fichero y al final se verificó que todos quedaro
   color; un valor del tema alterado; `Init` que no lanza error; `ApplyText` que no informa de fallos; usar el estado del Core; un
   tamaño de fuente alterado.
 - **Core/Init (4):** Theme o Popup como módulos requeridos; Popup sin depender de Theme; Popup dependiendo de Discovery.
+- **Limpieza de un `Init` fallido (11):** sin ocultación temprana del frame; ocultación temprana tras configurar en vez de antes; sin
+  limpieza del frame parcial al fallar; limpieza que no oculta; limpieza que no elimina los scripts; limpieza que deja el frame visible;
+  limpieza sin `pcall`; error de limpieza que sustituye al error original (no se conserva); registro en Escape antes de terminar la
+  construcción; fallo de `Init` que deja de ser definitivo; `Popup` marcado como listo tras un fallo de construcción.
 
 **Historial (transparencia):** una primera pasada dio 36 de 39. Tres no contaban: dos eran **huecos reales de las pruebas** (la
 restauración del contenido tras un fallo a mitad de actualización no se ejercitaba, porque el fallo ocurría en la primera llamada; y los
 espacios al principio y al final del texto no se comprobaban) y una era un **mutante equivalente** (no cambiaba el comportamiento), que
 se sustituyó por un defecto real. Además, tres mutaciones dejaban una excepción de Lua tras el `[FAIL]` claro; se endurecieron las
-pruebas (accesos que no lanzan error y bucles acotados) y se repitió la batería completa.
+pruebas (accesos que no lanzan error y bucles acotados) y se repitió la batería completa. Tras la corrección de limpieza del `Init`
+fallido se añadieron 11 mutaciones y se relanzaron las 39 anteriores contra el código final: 50 de 50.
 
 ### Cambios en pruebas anteriores
 
