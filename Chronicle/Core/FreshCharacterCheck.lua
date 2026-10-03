@@ -36,7 +36,9 @@ Chronicle = Chronicle or {}
 -- Discovery no tiene (ni se le ha añadido) una operación de reinicio; el aviso lo dice con claridad (decisión pendiente del supervisor).
 --
 -- CONTRATO
---   FreshCharacterCheck:Evaluate(level, playedSeconds) -> "fresh" | "not_fresh" | "unknown"   (función pura sobre los datos + Discovery)
+--   FreshCharacterCheck:Evaluate(level, playedSeconds) -> "fresh" | "not_fresh" | "unknown"
+--       unknown: tiempo o nivel no numéricos/infinitos/NaN/negativos, o Discovery ausente, no listo o que falla (IsReady o Count), SIEMPRE
+--       antes de mirar nivel o tiempo; con datos válidos y Discovery operativo: not_fresh si nivel ~= 1, tiempo > 1800 s o sin progreso; fresh si no.
 --   FreshCharacterCheck:IsCompleted() -> true si en ESTA sesión ya se procesó una respuesta válida (solo memoria)
 --   FreshCharacterCheck:Init() / IsReady()   Init es idempotente: crea UN frame y registra los dos eventos UNA vez. Lanza error si falta CreateFrame.
 --   FreshCharacterCheck.New({ discovery, popup, events, createFrame, unitLevel, requestTimePlayed }) crea otra instancia (pruebas).
@@ -94,9 +96,8 @@ local function NewCheck(deps)
         if not IsFinite(level) or not IsFinite(playedSeconds) or playedSeconds < 0 then
             return "unknown"
         end
-        if level ~= FRESH_LEVEL or playedSeconds > FRESH_PLAYED_SECONDS then
-            return "not_fresh"
-        end
+        -- Discovery se comprueba SIEMPRE, antes de decidir nada por nivel o tiempo: sin él no hay un resultado válido (ni siquiera un
+        -- negativo), porque «no fresco» tampoco puede afirmarse sin poder consultar el progreso.
         local discovery = Dep("discovery")
         if not IsObject(discovery) or type(discovery.IsReady) ~= "function" or type(discovery.Count) ~= "function" then
             return "unknown"
@@ -108,6 +109,9 @@ local function NewCheck(deps)
         local okCount, count = pcall(discovery.Count, discovery)
         if not okCount or not IsFinite(count) then
             return "unknown"
+        end
+        if level ~= FRESH_LEVEL or playedSeconds > FRESH_PLAYED_SECONDS then
+            return "not_fresh"
         end
         return count > 0 and "fresh" or "not_fresh"
     end

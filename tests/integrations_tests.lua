@@ -331,9 +331,14 @@ do
         f.check:Evaluate(1, 1801) == "not_fresh" and f.check:Evaluate(2, 60) == "not_fresh" and f.check:Evaluate(60, 99999) == "not_fresh")
     f.count = 0
     check("10c. Evaluate: sin progreso guardado -> not_fresh", f.check:Evaluate(1, 60) == "not_fresh")
-    check("10d. Evaluate: datos que no son números finitos o negativos -> unknown",
-        f.check:Evaluate(nil, 60) == "unknown" and f.check:Evaluate(1, nil) == "unknown" and f.check:Evaluate(1, -1) == "unknown"
-            and f.check:Evaluate(1, 0 / 0) == "unknown" and f.check:Evaluate("1", 60) == "unknown" and f.check:Evaluate(1, math.huge) == "unknown")
+    local function Ev(...)
+        local ok, result = pcall(f.check.Evaluate, f.check, ...)
+        return ok and result or "ERROR"
+    end
+    check("10d. Evaluate: datos que no son números finitos o negativos -> unknown (sin lanzar error)",
+        Ev(nil, 60) == "unknown" and Ev(1, nil) == "unknown" and Ev(1, -1) == "unknown"
+            and Ev(1, 0 / 0) == "unknown" and Ev("1", 60) == "unknown" and Ev(1, math.huge) == "unknown" and Ev(1, -math.huge) == "unknown"
+            and Ev(0 / 0, 60) == "unknown" and Ev(math.huge, 60) == "unknown" and Ev(1, "60") == "unknown")
     f.count = 5
     local notReady = MakeFresh({ discovery = { IsReady = function() return false end, Count = function() return 9 end } })
     local broken = MakeFresh({ discovery = { IsReady = function() error("roto") end, Count = function() return 9 end } })
@@ -406,6 +411,68 @@ do
             FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 60)
             return broken.emitted == 0 and not broken.check:IsCompleted()
         end)())
+end
+
+do
+    -- Regresión: Discovery se exige ANTES de decidir por nivel o tiempo. Cada caso se prueba con Evaluate() y con el flujo integrado (OnEvent).
+    local function working(count) return { IsReady = function() return true end, Count = function() return count end } end
+    local unavailable = {
+        { "Discovery no listo", { IsReady = function() return false end, Count = function() return 5 end } },
+        { "IsReady lanza un error", { IsReady = function() error("IsReady roto") end, Count = function() return 5 end } },
+        { "Count lanza un error", { IsReady = function() return true end, Count = function() error("Count roto") end } },
+        { "Count no devuelve un número", { IsReady = function() return true end, Count = function() return "mucho" end } },
+        { "Discovery sin métodos", {} },
+        { "Discovery ausente", nil },
+    }
+    for _, case in ipairs(unavailable) do
+        for _, played in ipairs({ 4000, 1800, 60 }) do
+            Boot(nil, QUIET)
+            local f = MakeFresh({ discovery = case[2] or false })
+            if case[2] == nil then f.check = Chronicle.FreshCharacterCheck.New({ discovery = nil, popup = f.popup, events = f.events,
+                createFrame = CreateFrame, unitLevel = function() return 1 end, requestTimePlayed = function() f.requests = f.requests + 1 end }) end
+            local evaluated = f.check:Evaluate(1, played)
+            local evaluatedLevel2 = f.check:Evaluate(2, played)
+            f.check:Init()
+            FireEvent("PLAYER_ENTERING_WORLD")
+            FireEvent("TIME_PLAYED_MSG", played)
+            check("14. " .. case[1] .. " + " .. played .. " s: Evaluate es unknown (también con otro nivel) y el flujo NO completa la sesión, no emite el evento y no avisa",
+                evaluated == "unknown" and evaluatedLevel2 == "unknown" and f.requests == 1 and f.emitted == 0 and #f.shown == 0 and f.check:IsCompleted() == false)
+        end
+    end
+    -- el resultado desconocido no se reintenta en la sesión, aunque Discovery se recupere después
+    Boot(nil, QUIET)
+    local flaky = { ready = false }
+    local fl = MakeFresh({ discovery = { IsReady = function() return flaky.ready end, Count = function() return 5 end } })
+    fl.check:Init()
+    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 4000)
+    flaky.ready = true
+    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 4000)
+    check("14b. un resultado desconocido no se reintenta en la misma sesión aunque Discovery se recupere: una sola petición, sin completar y sin aviso",
+        fl.requests == 1 and fl.check:IsCompleted() == false and fl.emitted == 0)
+
+    local operative = {
+        { "15. Discovery operativo + más de 1800 s -> not_fresh y comprobación completada, sin aviso", 4000, 5, "not_fresh", false },
+        { "15b. Discovery operativo + 1801 s -> not_fresh y completada", 1801, 5, "not_fresh", false },
+        { "15c. Discovery operativo + 1800 s sin progreso -> not_fresh y completada, sin aviso", 1800, 0, "not_fresh", false },
+        { "15d. Discovery operativo + 0 s sin progreso -> not_fresh y completada, sin aviso", 0, 0, "not_fresh", false },
+        { "15e. Discovery operativo + 1800 s con progreso -> fresh, aviso único y completada", 1800, 5, "fresh", true },
+        { "15f. Discovery operativo + 600 s con progreso -> fresh, aviso único y completada", 600, 1, "fresh", true },
+    }
+    for _, case in ipairs(operative) do
+        Boot(nil, QUIET)
+        local f = MakeFresh({ discovery = working(case[3]) })
+        local evaluated = f.check:Evaluate(1, case[2])
+        f.check:Init()
+        FireEvent("PLAYER_ENTERING_WORLD")
+        FireEvent("TIME_PLAYED_MSG", case[2])
+        FireEvent("TIME_PLAYED_MSG", case[2]); FireEvent("PLAYER_ENTERING_WORLD")
+        local noticed = case[5] and 1 or 0
+        check(case[1], evaluated == case[4] and f.check:IsCompleted() == true and f.requests == 1 and f.emitted == noticed and #f.shown == noticed)
+    end
+    Boot(nil, QUIET)
+    local lv = MakeFresh({ discovery = working(5) })
+    check("15g. Discovery operativo + nivel distinto de 1 -> not_fresh (con cualquier tiempo)",
+        lv.check:Evaluate(2, 60) == "not_fresh" and lv.check:Evaluate(60, 99999) == "not_fresh")
 end
 
 do

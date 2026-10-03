@@ -144,7 +144,11 @@ como garantía. Se eliminó: el módulo **no escribe nada** (ni en State ni en l
 **Consecuencia aceptada: mientras el personaje siga cumpliendo las condiciones (nivel 1, ≤ 30 min jugados y progreso guardado) el aviso puede volver a
 aparecer en otra sesión.** No se evita con ninguna marca persistente.
 
-**Faltan datos:** tiempo no numérico/negativo → desconocido; Discovery no listo → desconocido (nunca se asume progreso). **Qué consume el resultado:** emite `Chronicle.FreshCharacter.Detected` (sin argumentos) y, si hay Popup, encola un aviso **informativo**.
+**Faltan datos / orden de las comprobaciones (`Evaluate`):** primero se valida el tiempo y el nivel (no numéricos, infinitos, NaN o negativos → `unknown`);
+**después se exige Discovery SIEMPRE**, antes de mirar nivel o tiempo: ausente, sin métodos, no listo, o que falla al consultar `IsReady()` o `Count()`
+→ `unknown`, aunque el tiempo jugado ya superara 1800 s (un «no fresco» tampoco puede afirmarse sin poder consultar el progreso; una respuesta de 4000 s
+con Discovery caído NO completa la sesión). Solo entonces: nivel ≠ 1 o tiempo > 1800 s → `not_fresh`; si no, progreso > 0 → `fresh`, sin progreso →
+`not_fresh`. (Defecto corregido: la primera versión comprobaba el tiempo antes que Discovery.) **Qué consume el resultado:** emite `Chronicle.FreshCharacter.Detected` (sin argumentos) y, si hay Popup, encola un aviso **informativo**.
 **No reinicia, borra ni sobrescribe nada** (hay una prueba y una mutación que lo exigen).
 **Desviaciones del original [verificado en código]:** (1) solo atiende la respuesta a su propia petición (el original atendía cualquier
 `TIME_PLAYED_MSG`, incluido un `/played` manual en un personaje de otro nivel); (2) **no ofrece «Reiniciar»**, porque Discovery no tiene reinicio:
@@ -172,7 +176,7 @@ APIs de posición (`C_Map...`) ya estaban sin verificar desde la Fase 6.
 
 ## 7. Verificación
 
-`npm test` desde `tests`: **1523 superadas, 0 fallidas, código de salida 0** (1356 de las fases 1 a 11 y 167 de `tests/integrations_tests.lua`; ver «Corrección de FreshCharacterCheck» al final de esta sección). Son
+`npm test` desde `tests`: **1549 superadas, 0 fallidas, código de salida 0** (1356 de las fases 1 a 11 y 193 de `tests/integrations_tests.lua`; ver «Corrección de FreshCharacterCheck» al final de esta sección). Son
 pruebas con el **mock estricto** (se añadieron al mock `Minimap`, `GameTooltip`, `GetCursorPosition`, `GetTime`, `C_Timer`, `UnitLevel`, `UnitOnTaxi`,
 `RequestTimePlayed`, `InterfaceOptions_*`, `CheckButton`); **no demuestran** que esas APIs existan ni se comporten así en el cliente real.
 
@@ -207,6 +211,19 @@ Init de Trivia y de FreshCharacterCheck: cada guarda sola no cambia nada), que s
 además un **defecto real** del botón: si su construcción fallaba a medias, reintentar `Init` creaba otro botón con el mismo nombre; ahora queda
 oculto y reintentar da el mismo error. Tras corregirlo se repitió la batería completa desde un estado limpio. No se interrumpió ninguna ejecución.
 
+
+### Corrección de FreshCharacterCheck (Discovery exigido antes de decidir)
+
+Caso límite detectado en la revisión de `8fda0a7`: `Evaluate()` devolvía `not_fresh` por tiempo > 1800 s **antes** de comprobar Discovery, de modo que una
+respuesta válida de tiempo jugado completaba la sesión con Discovery ausente, no listo o fallando. Ahora Discovery se exige siempre antes de decidir
+(ver 4.5). Pruebas añadidas (26; bloques `14` y `15`, con `Evaluate()` **y** el flujo integrado por eventos): Discovery no listo, `IsReady()` que lanza
+error, `Count()` que lanza error o devuelve algo no numérico, sin métodos y ausente, cada uno con 4000, 1800 y 60 s → `unknown`, sesión sin completar,
+sin evento y sin aviso (y con otro nivel); el desconocido no se reintenta aunque Discovery se recupere; Discovery operativo con más de 1800 s → `not_fresh`
+completada; ≤ 1800 s sin progreso → `not_fresh` completada; ≤ 1800 s con progreso → `fresh`, aviso único y completada; nivel distinto de 1 → `not_fresh`. La
+prueba `10d` pasó a llamadas protegidas. Con el código anterior fallaban 19 de esas aserciones. `npm test`: **1549 superadas, 0 fallidas**. Mutaciones:
+**16, las 16 detectadas por aserciones claras** (`V14`, aceptar un tiempo no válido, deja además una excepción posterior); cubren restaurar el defecto, ignorar
+Discovery no listo, error de `IsReady`, error o valor no numérico de `Count`, Discovery ausente, los umbrales de tiempo y nivel, el progreso, completar o
+no según el resultado, reintentar, y avisar o no. Primera pasada: 15 de 16 (el que faltaba solo producía una excepción por llamadas sin proteger).
 
 ### Corrección de FreshCharacterCheck (marca persistente retirada)
 
