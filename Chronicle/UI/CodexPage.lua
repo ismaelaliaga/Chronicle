@@ -9,6 +9,9 @@ Chronicle = Chronicle or {}
 -- ni deja hueco. Los textos se muestran ENTEROS (nada se recorta): el alto de la página se mide con el texto ya puesto y la
 -- zona se desplaza con la rueda del ratón. Sin página actual se muestra una indicación discreta.
 --
+-- PÁGINA BLOQUEADA (Fase 10): si el modelo dice que la entidad no está descubierta, la página es solo «???» (color LOCKED) y
+-- una línea que explica el motivo; nada más. La vista no conoce el ID ni el nombre real, no se los dan.
+--
 -- BREADCRUMBS: la ruta de `parent` hasta la página actual; cada tramo anterior es un botón que navega a esa entidad y el
 -- último (la página actual) es solo texto. Si no caben en el ancho disponible se quitan tramos por el principio y se
 -- antepone «...». Los breadcrumbs NO son el historial: este es el de Atrás/Adelante.
@@ -23,6 +26,7 @@ local TEXT_BACK, TEXT_FORWARD = "<", ">"
 local TEXT_SEPARATOR, TEXT_ELLIPSIS = "/", "..."
 local TEXT_LOCATION = "Ubicado en: "
 local TEXT_EMPTY = "Selecciona una entrada de la navegación."
+local TEXT_LOCKED = "Aún no has descubierto esta entrada."
 
 local function IsFinite(value)
     return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
@@ -171,10 +175,18 @@ local function NewPage(deps)
         end
         local y = pad
         y = Place(title, page.name, y, textWidth, pad, gap / 2)
+        if page.locked then
+            Tint(title, "LOCKED")
+            y = Place(kind, TEXT_LOCKED, y, textWidth, pad, gap / 2)
+            scroll:SetContentHeight(y + pad)
+            scroll:ScrollTo(0)
+            return
+        end
         Tint(title, page.nameIsFallback and "TEXT_MUTED" or "GOLD")
         y = Place(kind, page.typeLabel, y, textWidth, pad, gap / 2)
         if page.location then
             y = Place(location, TEXT_LOCATION .. page.location.name, y, textWidth, pad, gap / 2)
+            if page.location.locked then Tint(location, "LOCKED") else Tint(location, "TEXT_MUTED") end
         end
         if #page.details > 0 then
             local parts = {}
@@ -207,7 +219,10 @@ local function NewPage(deps)
         local pad = theme:GetSpacing("LG")
         local sepGap = theme:GetSpacing("XS")
         local items = model:GetCurrent() and model:GetBreadcrumbs(model:GetCurrent()) or {}
-        for _, crumb in ipairs(crumbs) do crumb.button:Hide() end
+        for _, crumb in ipairs(crumbs) do
+            crumb.label:SetText("") -- los tramos sin usar no conservan el nombre de la ruta anterior
+            crumb.button:Hide()
+        end
         for _, separator in ipairs(separators) do separator:Hide() end
         ellipsis:Hide()
 
@@ -262,7 +277,7 @@ local function NewPage(deps)
             crumb.id = item.id
             crumb.label:SetText(item.name)
             local isLast = i == #items
-            Tint(crumb.label, isLast and "GOLD" or (item.nameIsFallback and "TEXT_MUTED" or "TEXT_IVORY"))
+            Tint(crumb.label, item.locked and "LOCKED" or (isLast and "GOLD" or (item.nameIsFallback and "TEXT_MUTED" or "TEXT_IVORY")))
             crumb.button:ClearAllPoints()
             crumb.button:SetPoint("LEFT", toolbar, "LEFT", x, 0)
             crumb.button:SetSize(math.max(1, widths[i]), theme:GetLayout("CODEX_TOOLBAR_HEIGHT"))
@@ -283,10 +298,11 @@ local function NewPage(deps)
         end
     end
 
-    function self:Refresh()
+    -- `forcePage`: repinta la página aunque sea la misma (cuando cambia lo que se puede ver de ella, p. ej. al descubrirla).
+    function self:Refresh(forcePage)
         -- Expandir o contraer el árbol no cambia la página: no se repinta ni se pierde el desplazamiento de lectura.
         local current = model:GetCurrent()
-        if current ~= renderedId then
+        if forcePage or current ~= renderedId then
             RefreshPage()
             renderedId = current
         end

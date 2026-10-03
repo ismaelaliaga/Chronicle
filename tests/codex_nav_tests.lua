@@ -51,8 +51,12 @@ local function World(entities, texts)
     end
     return registry, localization
 end
+-- Desde la Fase 10 el modelo solo muestra lo que Discovery confirma. Las pruebas de la Fase 9 (árbol, páginas, historial)
+-- describen la vista COMPLETA del catálogo, así que usan un Discovery de prueba que lo da todo por descubierto; la política de
+-- bloqueo se prueba aparte en tests/codex_discovery_tests.lua.
+local ALL_DISCOVERED = { IsReady = function() return true end, IsDiscovered = function() return true end }
 local function ModelOf(registry, localization, onChange)
-    return Chronicle.CodexModel.New({ registry = registry, localization = localization, onChange = onChange })
+    return Chronicle.CodexModel.New({ registry = registry, localization = localization, onChange = onChange, discovery = ALL_DISCOVERED })
 end
 
 -- ===================== LÓGICA sobre el catálogo real =====================
@@ -370,7 +374,10 @@ do
 end
 
 -- ===================== INTERFAZ con el mock =====================
-Boot()
+Boot(function()
+    -- Discovery real, pero con todo «descubierto» para ver el catálogo completo (sin escribir nada en ChronicleCharDB).
+    Chronicle.Discovery.IsDiscovered = function() return true end
+end)
 -- Las filas del árbol se crean DESPUÉS del arranque (al expandir): el registro de frames sigue activo durante esta sección.
 CreateFrame = function(kind, name, parent, template)
     local frame = realCreateFrame(kind, name, parent, template)
@@ -574,7 +581,7 @@ do
     local reg, loc = World({ { id = "continent:big", type = "continent" } }, { ["continent:big"] = { name = "Gran lore", description = hugeText } })
     local ctx = { frames = {} }
     local big = Chronicle.Codex.New({
-        theme = Chronicle.Theme, registry = reg, localization = loc, uiParent = UIParent, specialFrames = {},
+        theme = Chronicle.Theme, registry = reg, localization = loc, discovery = ALL_DISCOVERED, uiParent = UIParent, specialFrames = {},
         createFrame = function(...) local f = realCreateFrame(...); ctx.frames[#ctx.frames + 1] = f; return f end,
     })
     big:Init()
@@ -681,7 +688,7 @@ check("A4. el modelo solo depende de lo que se le inyecta (Registry y Localizati
     end)())
 check("A5. usar la navegación no escribe nada en ChronicleCharDB: queda exactamente el estado inicial del Core",
     deepEqual(ChronicleCharDB, { schemaVersion = 1, discovery = { entries = {} } }))
-check("A6. la navegación no usa Discovery: no hay estados de descubierto/no descubierto ni marcadores ??? en ninguna fila ni página",
+check("A6. con todo descubierto no aparece ningún «???» en el árbol y navegar no descubre nada (Fase 9: vista completa; la política de bloqueo está en codex_discovery_tests)",
     (function()
         for _, row in ipairs(navRows()) do
             if (textOf(row.select) or ""):find("?", 1, true) then return false end
@@ -741,7 +748,7 @@ CreateFrame = realCreateFrame
 local function Mount(reg, loc, createFrameOver, theme)
     local mount = { frames = {} }
     mount.codex = Chronicle.Codex.New({
-        theme = theme or Chronicle.Theme, registry = reg, localization = loc, uiParent = UIParent, specialFrames = {},
+        theme = theme or Chronicle.Theme, registry = reg, localization = loc, discovery = ALL_DISCOVERED, uiParent = UIParent, specialFrames = {},
         createFrame = function(...)
             if createFrameOver then createFrameOver(...) end
             local f = realCreateFrame(...)

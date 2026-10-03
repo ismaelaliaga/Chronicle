@@ -497,7 +497,7 @@ do
             end
             return true
         end)())
-    check("12d. Codex solo depende de Theme, Registry, Localization y sus módulos internos (y de los globales de interfaz inyectados); no toca State, Discovery, Popup ni ChronicleCharDB",
+    check("12d. Codex solo depende de Theme, Registry, Localization, Discovery y Events (inyectados) y sus módulos internos; no toca State, Popup ni ChronicleCharDB",
         (function()
             local deps = {}
             for _, line in ipairs(codeOf("UI/Codex.lua")) do
@@ -508,12 +508,12 @@ do
             local list = {}
             for name in pairs(deps) do list[#list + 1] = name end
             table.sort(list)
-            return table.concat(list, ",") == "CodexModel,CodexNavigation,CodexPage,CodexScroll,Localization,Registry,Theme"
+            return table.concat(list, ",") == "CodexModel,CodexNavigation,CodexPage,CodexScroll,Discovery,Events,Localization,Registry,Theme"
         end)())
     check("12e. el Codex no usa temporizadores, animaciones, sonidos ni eventos del cliente",
         (function()
             for _, line in ipairs(codeOf("UI/Codex.lua")) do
-                for _, word in ipairs({ "C_Timer", "OnUpdate", "UIFrameFade", "PlaySound", "CreateAnimationGroup", "RegisterEvent", "GetTime", "Chronicle.Events", "SLASH_", "Minimap" }) do
+                for _, word in ipairs({ "C_Timer", "OnUpdate", "UIFrameFade", "PlaySound", "CreateAnimationGroup", "RegisterEvent", "GetTime", "SLASH_", "Minimap" }) do
                     if line:find(word, 1, true) then return false, word end
                 end
             end

@@ -5,8 +5,18 @@ Chronicle = Chronicle or {}
 -- FASE 8: la ventana. FASE 9: la NAVEGACIÓN Y LAS PÁGINAS. La izquierda es un árbol de las entidades de Registry (con sus
 -- nombres de Localization) y la derecha la página de la entidad elegida, con breadcrumbs e historial Atrás/Adelante. Este
 -- fichero solo construye la ventana y CABLEA las piezas; la lógica está en UI/CodexModel.lua (sin frames) y las vistas en
--- UI/CodexNavigation.lua, UI/CodexPage.lua y UI/CodexScroll.lua. Sigue sin haber integración con Discovery (todo se ve,
--- descubierto o no), ni comando /chronicle, ni botón de minimapa, ni opciones, ni persistencia de posición, página o historial.
+-- UI/CodexNavigation.lua, UI/CodexPage.lua y UI/CodexScroll.lua. FASE 10: integración con Discovery. El Codex solo CONSULTA
+-- qué entidades ha descubierto el personaje (Chronicle.Discovery, la única fuente de verdad; no lo duplica ni lo escribe) y
+-- pinta las no descubiertas como «???» sin datos (ver UI/CodexModel.lua). Sigue sin haber comando /chronicle, botón de
+-- minimapa, opciones, ni persistencia de posición, página o historial.
+--
+-- ACTUALIZACIÓN. Al terminar Init con éxito el Codex se suscribe UNA sola vez (con una función fija, que el bus no duplica ni
+-- aunque se repita) al evento de Discovery (Discovery.EVENT_DISCOVERED, un único argumento: el ID descubierto). Con la
+-- ventana VISIBLE repinta solo lo afectado (el árbol y los breadcrumbs siempre; la página solo si es la entidad descubierta
+-- o su ubicación). Con la ventana OCULTA no pinta nada: anota que hay cambios y los aplica al mostrarla. Si no pudo
+-- suscribirse (sin bus, sin Discovery listo o sin nombre de evento) la ventana se repinta por completo en cada apertura, así
+-- que el estado mostrado es siempre el actual. Repintar nunca descubre nada, así que no hay bucle de eventos.
+-- Discovery es una dependencia BLANDA: si falla o no está listo, el Codex se inicializa igual y todo queda bloqueado.
 --
 -- ESTILO: todo sale de Chronicle.Theme (colores, fuentes, medidas, textura, backdrop, capa). Este fichero no define
 -- ninguna constante visual propia; los únicos literales son las dos etiquetas provisionales, el nombre del frame y las
@@ -24,9 +34,11 @@ Chronicle = Chronicle or {}
 --   visible, u ocultar algo ya oculto, es true). Motivos: "not_ready" (antes de un Init válido, o tras uno fallido; nunca
 --   crean la ventana por su cuenta ni lanzan error) y "ui_error" (la interfaz falló; se comunica por geterrorhandler).
 --   La API pública NO cambia en la Fase 9: la navegación se hace con la propia interfaz (clics), no con métodos.
---   Chronicle.Codex.New({ theme, registry, localization, createFrame, uiParent, specialFrames }) crea otra instancia
---   (pruebas); cada dependencia puede ser el objeto o una función que lo devuelve (createFrame es la propia función). La
---   instancia por defecto es Chronicle.Codex y usa los globales del cliente y Chronicle.Theme/Registry/Localization.
+--   Chronicle.Codex.New({ theme, registry, localization, discovery, events, createFrame, uiParent, specialFrames }) crea otra
+--   instancia (pruebas); cada dependencia puede ser el objeto o una función que lo devuelve (createFrame es la propia
+--   función). `discovery` y `events` son opcionales: sin ellos todo queda bloqueado y no hay actualización en vivo. La
+--   instancia por defecto es Chronicle.Codex y usa los globales del cliente y Chronicle.Theme/Registry/Localization/
+--   Discovery/Events.
 --
 -- ARRASTRE: se mueve arrastrando con el botón izquierdo; SetClampedToScreen (si el cliente lo ofrece) evita sacarla de la
 -- pantalla. La posición NO se guarda: cada sesión empieza centrada. Escape la cierra (UISpecialFrames).
@@ -48,6 +60,7 @@ Chronicle = Chronicle or {}
 local FRAME_NAME = "ChronicleCodexFrame"
 
 local TEXT_TITLE = "Chronicle"
+local DEFAULT_EVENT_DISCOVERED = nil -- el nombre del evento lo da Discovery (EVENT_DISCOVERED); no se duplica aquí
 
 -- Módulos internos que cablea el Codex (y que se comprueban antes de crear nada).
 local INTERNAL_MODULES = { "CodexModel", "CodexScroll", "CodexNavigation", "CodexPage" }
@@ -86,6 +99,9 @@ local function NewCodex(deps)
     -- Estado privado
     local frame -- la ventana; nil hasta que Init termina
     local views -- { navigation, page }; nil hasta que Init termina
+    local model -- el modelo de navegación; nil hasta que Init termina
+    local subscribed = false -- ¿se registró el aviso de Discovery?
+    local stale = false -- hubo cambios de Discovery con la ventana oculta
     local ready = false
     local initError = nil -- error definitivo de una construcción fallida
     local self = {}
@@ -234,15 +250,47 @@ local function NewCodex(deps)
     end
 
     -- Repinta las vistas tras un cambio del modelo. Un fallo de la interfaz se comunica, no se propaga al modelo.
-    local function RefreshViews()
+    -- `forcePage`: rehace también la página aunque sea la misma.
+    local function RefreshViews(forcePage)
         if not views then
             return
         end
         for _, name in ipairs({ "navigation", "page" }) do
-            local ok, err = pcall(views[name].Refresh, views[name])
+            local ok, err = pcall(views[name].Refresh, views[name], name == "page" and forcePage == true or nil)
             if not ok then
                 ReportError("Chronicle.Codex: error al actualizar " .. name .. ": " .. tostring(err))
             end
+        end
+    end
+
+    -- Aviso de Discovery (una entidad recién descubierta). Es una función FIJA: registrarla otra vez no la duplica.
+    local function OnDiscovered(id)
+        if not ready or not model or type(id) ~= "string" then
+            return
+        end
+        if not IsVisible() then
+            stale = true -- no se pinta nada con la ventana oculta; se aplica al mostrarla
+            return
+        end
+        RefreshViews(model:AffectsPage(id))
+    end
+
+    -- Se suscribe al evento de Discovery si hay con qué (bus, servicio listo y nombre del evento). Una sola vez.
+    local function Subscribe()
+        local events, discovery = Dep("events"), Dep("discovery")
+        if not IsObject(events) or type(events.Register) ~= "function" or not IsObject(discovery)
+            or type(discovery.IsReady) ~= "function" or discovery:IsReady() ~= true then
+            return
+        end
+        local eventName = discovery.EVENT_DISCOVERED or DEFAULT_EVENT_DISCOVERED
+        if type(eventName) ~= "string" or eventName == "" then
+            return
+        end
+        local ok, err = pcall(events.Register, events, eventName, OnDiscovered)
+        if ok then
+            subscribed = true
+        else
+            ReportError("Chronicle.Codex: no se pudo suscribir al aviso de Discovery: " .. tostring(err))
         end
     end
 
@@ -265,6 +313,11 @@ local function NewCodex(deps)
         end
         if theme:GetStrata("CODEX") == nil then
             error("Codex: a Theme le falta strata.CODEX", 0)
+        end
+        for _, name in ipairs({ "SELECTION", "LOCKED" }) do
+            if theme:GetColor(name) == nil then
+                error("Codex: a Theme le falta colors." .. name, 0)
+            end
         end
         local registry, localization = Dep("registry"), Dep("localization")
         if not IsObject(registry) or type(registry.Has) ~= "function" then
@@ -292,8 +345,11 @@ local function NewCodex(deps)
         end
 
         local partial = {}
-        local model = Chronicle.CodexModel.New({ registry = registry, localization = localization, onChange = RefreshViews })
-        local ok, f, builtViews = pcall(Build, theme, parent, createFrame, specialFrames, partial, model)
+        local builtModel = Chronicle.CodexModel.New({
+            registry = registry, localization = localization, onChange = RefreshViews,
+            discovery = function() return Dep("discovery") end,
+        })
+        local ok, f, builtViews = pcall(Build, theme, parent, createFrame, specialFrames, partial, builtModel)
         if not ok then
             -- El error original va primero y completo; si además la limpieza falla, se añade como nota.
             local message = "Codex: no se pudo crear la ventana: " .. tostring(f)
@@ -304,8 +360,9 @@ local function NewCodex(deps)
             initError = message
             error(initError, 0)
         end
-        frame, views = f, builtViews
+        frame, views, model = f, builtViews, builtModel
         ready = true
+        Subscribe()
     end
 
     function self:IsReady()
@@ -334,6 +391,11 @@ local function NewCodex(deps)
                 ReportError("Chronicle.Codex: la ventana no quedó " .. (visible and "visible" or "oculta"))
                 return false, "ui_error"
             end
+            -- Al abrir se aplica lo que cambió mientras estaba oculta (o todo, si no hay aviso de Discovery).
+            if visible and (stale or not subscribed) then
+                stale = false
+                RefreshViews(true)
+            end
         end
         return true
     end
@@ -361,6 +423,8 @@ Chronicle.Codex = NewCodex({
     theme = function() return Chronicle.Theme end,
     registry = function() return Chronicle.Registry end,
     localization = function() return Chronicle.Localization end,
+    discovery = function() return Chronicle.Discovery end,
+    events = function() return Chronicle.Events end,
     createFrame = function(...) return CreateFrame(...) end,
     uiParent = function() return UIParent end,
     specialFrames = function() return UISpecialFrames end,

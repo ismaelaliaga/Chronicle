@@ -1,13 +1,31 @@
 Chronicle = Chronicle or {}
 
--- CodexModel: la LÓGICA de navegación del Codex, sin ningún frame. Construye el árbol, las páginas, los breadcrumbs y el
+-- CodexModel: la LÓGICA de navegación del Codex, sin ningún frame. (Fase 10: además decide QUÉ puede verse de cada entidad.) Construye el árbol, las páginas, los breadcrumbs y el
 -- historial a partir de Chronicle.Registry (qué existe y cómo se relaciona) y Chronicle.Localization (cómo se llama y qué
 -- dice). No guarda ni duplica entidades ni jerarquías: lo único que guarda es estado de la interfaz en memoria (qué nodos
 -- están expandidos, la página actual y el historial). Nada se escribe en SavedVariables ni se toca ChronicleCharDB.
 --
--- API (Chronicle.CodexModel.New({ registry, localization, onChange }) -> modelo; todo devuelve copias):
+-- DESCUBRIMIENTO (Fase 10). El modelo NO guarda ni duplica el estado de descubrimiento: lo CONSULTA cada vez a
+-- `deps.discovery` (el objeto o una función que lo devuelve; en el addon, Chronicle.Discovery). Una entidad se considera
+-- descubierta si y solo si el servicio está listo (IsReady() == true) y IsDiscovered(id) == true. En CUALQUIER otro caso
+-- (sin servicio, sin esos métodos, no listo, un error al consultar, un valor que no es `true`) la entidad está BLOQUEADA:
+-- nunca se supone descubierta. Un error al consultar se comunica una vez por mensaje (geterrorhandler) y no se propaga.
+-- Consultar, seleccionar, expandir o mostrar NO descubre nada: el modelo no llama nunca a Discover.
+-- Una entidad bloqueada:
+--   · se llama «???» (LOCKED_LABEL) en TODOS los sitios donde el modelo da un nombre (filas, breadcrumbs, ubicación
+--     contextual de otras páginas). Nunca se devuelve su nombre real ni su ID como nombre de reserva.
+--   · su página es { locked = true, name = "???" } y NADA más: sin ID, tipo, ubicación, descripción, cuerpo, raza ni rol.
+--   · sigue en el árbol, se puede seleccionar y expandir, y conserva su sitio en el orden (que sale de su ID y su tipo).
+-- Cada entidad se evalúa POR SÍ SOLA: descubrir un lugar no descubre lo que hay en él, ni un NPC sus artículos, ni nada es
+-- recursivo. Un descendiente descubierto bajo un ancestro bloqueado se ve con su nombre; el ancestro sigue siendo «???» en su
+-- breadcrumb y en su ubicación. El árbol (profundidad, número de hijos y orden) sí es visible aunque haya bloqueos: ver
+-- docs/fase10_discovery_codex.md.
+--
+-- API (Chronicle.CodexModel.New({ registry, localization, discovery, onChange }) -> modelo; todo devuelve copias):
 --   m:GetRows()                 -> lista de filas visibles del árbol, en orden: { id, depth, name, nameIsFallback, type,
---                                  hasChildren, expanded, selected }
+--                                  hasChildren, expanded, selected, locked }
+--   m:IsDiscovered(id)          -> true | false (ver «Descubrimiento»); false para un ID desconocido
+--   m:AffectsPage(id)           -> true si la página actual cambia al descubrirse `id` (ella misma o su ubicación)
 --   m:GetChildren(id)           -> IDs de los hijos del nodo, ordenados (ver «Árbol»)
 --   m:Select(id)                -> true | false, "invalid_id" | "unknown_id"      muestra la página y la anota en el historial
 --   m:Toggle(id)                -> true, expandido | false, "unknown_id" | "no_children"      NO cambia la página actual
@@ -17,7 +35,7 @@ Chronicle = Chronicle or {}
 --   m:GetBreadcrumbs(id)        -> { { id, name, nameIsFallback }, ... } de la raíz a `id` (incluido) por la cadena `parent`
 --   m:Back() / m:Forward()      -> true | false, "no_history"                  cambian la página sin tocar el historial
 --   m:CanBack() / m:CanForward() / m:GetHistory() -> { ids = {...}, index = n }
---   m:GetName(id)               -> nombre, esFallback | nil si el ID no existe
+--   m:GetName(id)               -> nombre, esFallback, bloqueada | nil si el ID no existe («???», false, true si está bloqueada)
 --   `onChange` (opcional) se llama sin argumentos tras cualquier cambio de estado visible. Si lanza error, se ignora.
 --
 -- ÁRBOL. Cada nodo cuelga de su «ancla»: su `parent` si lo tiene (la jerarquía geográfica) y, si no tiene `parent`, su
@@ -54,6 +72,7 @@ Chronicle = Chronicle or {}
 --   * Back/Forward mueven la posición sin modificar la lista; saltan las entradas cuyo ID ya no existe en el Registry.
 --   * Los breadcrumbs (ruta geográfica de UNA página) y el historial (páginas visitadas, en orden) son cosas distintas.
 
+local LOCKED_LABEL = "???"
 local MAX_HISTORY = 100
 local MAX_DEPTH = 64 -- tope de seguridad al subir por anclas
 
@@ -74,6 +93,20 @@ local function NewModel(deps)
     local expanded = {} -- id -> true
     local history, index = {}, 0
     local self = {}
+    local reported = {} -- mensajes de error de Discovery ya comunicados (sin repetirlos en cada repintado)
+
+    local function ReportOnce(message)
+        if reported[message] then
+            return
+        end
+        reported[message] = true
+        local handler = geterrorhandler and geterrorhandler()
+        if handler then
+            handler(message)
+        else
+            print(message)
+        end
+    end
 
     local function Notify()
         if type(deps.onChange) == "function" then
@@ -124,9 +157,45 @@ local function NewModel(deps)
         return nil
     end
 
+    -- Una entidad solo está descubierta si el servicio lo confirma; cualquier duda es «bloqueada».
+    function self:IsDiscovered(id)
+        if not Known(id) then
+            return false
+        end
+        local service = deps.discovery
+        if type(service) == "function" then
+            local ok, resolved = pcall(service)
+            if not ok then
+                ReportOnce("Chronicle.CodexModel: no se pudo obtener Discovery: " .. tostring(resolved))
+                return false
+            end
+            service = resolved
+        end
+        if type(service) ~= "table" or type(service.IsReady) ~= "function" or type(service.IsDiscovered) ~= "function" then
+            return false
+        end
+        local okReady, ready = pcall(service.IsReady, service)
+        if not okReady then
+            ReportOnce("Chronicle.CodexModel: error al consultar Discovery:IsReady: " .. tostring(ready))
+            return false
+        end
+        if ready ~= true then
+            return false
+        end
+        local ok, discovered = pcall(service.IsDiscovered, service, id)
+        if not ok then
+            ReportOnce("Chronicle.CodexModel: error al consultar Discovery:IsDiscovered: " .. tostring(discovered))
+            return false
+        end
+        return discovered == true
+    end
+
     function self:GetName(id)
         if not Known(id) then
             return nil
+        end
+        if not self:IsDiscovered(id) then
+            return LOCKED_LABEL, false, true
         end
         local name = Text(registry:Get(id), "name", "nameKey")
         if name then
@@ -172,11 +241,11 @@ local function NewModel(deps)
                 return
             end
             local children = self:GetChildren(id)
-            local name, fallback = self:GetName(id)
+            local name, fallback, locked = self:GetName(id)
             local isOpen = expanded[id] == true and #children > 0
             rows[#rows + 1] = {
                 id = id, depth = depth, name = name, nameIsFallback = fallback, type = entity.type,
-                hasChildren = #children > 0, expanded = isOpen, selected = (history[index] == id),
+                hasChildren = #children > 0, expanded = isOpen, selected = (history[index] == id), locked = locked == true,
             }
             if isOpen then
                 for _, childId in ipairs(children) do
@@ -300,17 +369,35 @@ local function NewModel(deps)
         local current = id
         while current and not seen[current] and #chain < MAX_DEPTH and registry:Has(current) do
             seen[current] = true
-            local name, fallback = self:GetName(current)
-            table.insert(chain, 1, { id = current, name = name, nameIsFallback = fallback })
+            local name, fallback, locked = self:GetName(current)
+            table.insert(chain, 1, { id = current, name = name, nameIsFallback = fallback, locked = locked == true })
             local entity = registry:Get(current)
             current = type(entity.parent) == "string" and entity.parent or nil -- SOLO `parent`: nunca located_in
         end
         return chain
     end
 
+    -- ¿Cambia la página actual si se descubre `id`? Sí si es ella misma o el lugar de su ubicación contextual. (Los
+    -- breadcrumbs y el árbol se repintan siempre; esto decide solo si hay que rehacer la página, que vuelve arriba.)
+    function self:AffectsPage(id)
+        local current = history[index]
+        if not current or not Known(id) then
+            return false
+        end
+        if id == current then
+            return true
+        end
+        local entity = registry:Get(current)
+        return entity ~= nil and entity.located_in == id
+    end
+
     function self:GetPage(id)
         if not Known(id) then
             return nil
+        end
+        if not self:IsDiscovered(id) then
+            -- Página bloqueada: solo «???». Ni el ID, ni el tipo, ni la ubicación, ni ningún texto.
+            return { locked = true, name = LOCKED_LABEL, nameIsFallback = false, bodyUnresolved = false, details = {} }
         end
         local entity = registry:Get(id)
         local name, fallback = self:GetName(id)
@@ -329,8 +416,8 @@ local function NewModel(deps)
             end
         end
         if type(entity.located_in) == "string" and registry:Has(entity.located_in) then
-            local locName, locFallback = self:GetName(entity.located_in)
-            page.location = { id = entity.located_in, name = locName, nameIsFallback = locFallback }
+            local locName, locFallback, locLocked = self:GetName(entity.located_in)
+            page.location = { id = entity.located_in, name = locName, nameIsFallback = locFallback, locked = locLocked == true }
         end
         for _, item in ipairs(DETAIL_FIELDS) do
             local ok, value = pcall(localization.Get, localization, id, item.field)

@@ -7,6 +7,9 @@ Chronicle = Chronicle or {}
 --   · Seleccionar (clic en el nombre)     model:Select(id)  -> cambia la página y queda registrada en el historial.
 --   · Expandir/contraer (clic en +/-)     model:Toggle(id)  -> NO cambia la página: es otro botón.
 --   · La fila seleccionada lleva un fondo (color SELECTION) y el texto en oro; un nombre que es un fallback (el ID) va atenuado.
+--   · Una entrada BLOQUEADA (Fase 10) se pinta con el color LOCKED: sigue pudiéndose seleccionar y expandir, y si además está
+--     seleccionada conserva el fondo de selección pero NO el oro, para que «bloqueada» y «seleccionada» no se confundan.
+--     La vista solo pinta lo que el modelo da: nunca ve el nombre real de una entrada bloqueada.
 --   · Las filas son un conjunto que se REUTILIZA: crece cuando hace falta y las sobrantes se ocultan; nunca se destruyen.
 --   · Al cambiar la selección se desplaza la lista lo mínimo para que la fila seleccionada sea visible.
 --
@@ -93,7 +96,7 @@ local function NewNavigation(deps)
             row.label:SetPoint("LEFT", row.select, "LEFT", x + toggleWidth + gap, 0)
             row.label:SetWidth(math.max(1, contentWidth - x - toggleWidth - gap))
             row.label:SetText(item.name)
-            ApplyColor(row.label, item.selected and "GOLD" or (item.nameIsFallback and "TEXT_MUTED" or "TEXT_IVORY"))
+            ApplyColor(row.label, item.locked and "LOCKED" or (item.selected and "GOLD" or (item.nameIsFallback and "TEXT_MUTED" or "TEXT_IVORY")))
             if item.selected then
                 row.highlight:Show()
                 selectedIndex = i
@@ -112,7 +115,10 @@ local function NewNavigation(deps)
             row.select:Show()
         end
         for i = #list + 1, #rows do
+            -- Las filas sobrantes se ocultan y se vacían: no conservan el texto (ni el nombre) de lo que mostraron.
             rows[i].id = nil
+            rows[i].label:SetText("")
+            rows[i].symbol:SetText("")
             rows[i].select:Hide()
             rows[i].toggle:Hide()
         end

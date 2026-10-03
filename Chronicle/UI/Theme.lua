@@ -52,6 +52,10 @@ local DEFAULT_DEFINITIONS = {
         TEXT_MUTED = { 0.58, 0.53, 0.46, 1 }, -- texto secundario
         SHADOW = { 0, 0, 0, 1 }, -- sombra de texto
         SELECTION = { 0.80, 0.64, 0.30, 0.18 }, -- fila seleccionada de una lista (oro translúcido sobre el fondo)
+        -- Entradas del Codex aún no descubiertas (Fase 10). Más apagado que TEXT_MUTED (que es el texto secundario y el
+        -- nombre de reserva de una entrada descubierta) y sin relación con SELECTION, que es un fondo: así «bloqueada» no se
+        -- confunde ni con «secundaria» ni con «seleccionada».
+        LOCKED = { 0.40, 0.36, 0.31, 1 },
     },
     -- Roles tipográficos: cada texto pide un rol en vez de fijar fuente/tamaño/color.
     fonts = {
