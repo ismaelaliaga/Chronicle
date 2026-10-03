@@ -309,13 +309,12 @@ end
 local function QUIET() Chronicle.FreshCharacterCheck.Init = function() end end
 local function MakeFresh(over)
     over = over or {}
-    local ctx = { frames = 0, requests = 0, level = over.level or 1, emitted = 0, shown = {}, doneWrites = 0 }
-    local state = over.state or Chronicle.State
+    local ctx = { frames = 0, requests = 0, level = over.level or 1, emitted = 0, shown = {} }
     ctx.discovery = over.discovery or { IsReady = function() return true end, Count = function() return ctx.count or 3 end }
     ctx.events = { Emit = function(_, name) ctx.emitted = ctx.emitted + 1; ctx.lastEvent = name end }
     ctx.popup = { Enqueue = function(_, content) ctx.shown[#ctx.shown + 1] = content; return true, "shown" end }
     ctx.check = Chronicle.FreshCharacterCheck.New({
-        state = state, discovery = ctx.discovery, popup = ctx.popup, events = ctx.events,
+        discovery = ctx.discovery, popup = ctx.popup, events = ctx.events,
         createFrame = function(...) ctx.frames = ctx.frames + 1; return CreateFrame(...) end,
         unitLevel = function() return ctx.level end,
         requestTimePlayed = function() ctx.requests = ctx.requests + 1 end,
@@ -348,22 +347,22 @@ do
     local f = MakeFresh()
     f.check:Init(); f.check:Init()
     check("11. Init es idempotente: un único frame y listo", f.frames == 1 and f.check:IsReady())
-    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("PLAYER_ENTERING_WORLD")
-    check("11b. a nivel 1 se pide el tiempo jugado UNA sola vez aunque PLAYER_ENTERING_WORLD salte varias veces", f.requests == 1)
+    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("PLAYER_ENTERING_WORLD")
+    check("11b. a nivel 1 se pide el tiempo jugado UNA sola vez aunque PLAYER_ENTERING_WORLD salte varias veces en la sesión", f.requests == 1)
     FireEvent("TIME_PLAYED_MSG", 600)
-    check("11c. con respuesta fresca se emite el evento una vez, se avisa en el Popup y se marca la comprobación como hecha",
-        f.emitted == 1 and f.lastEvent == "Chronicle.FreshCharacter.Detected" and #f.shown == 1
-            and Chronicle.State:Get("freshCheck", "done") == true and f.check:IsDone())
+    check("11c. con respuesta fresca se emite el evento una vez, se avisa en el Popup y la comprobación queda completada EN ESTA SESIÓN (solo en memoria)",
+        f.emitted == 1 and f.lastEvent == "Chronicle.FreshCharacter.Detected" and #f.shown == 1 and f.check:IsCompleted())
     check("11d. el aviso informa con claridad y NO ofrece reiniciar (Discovery no puede)",
-        f.shown[1].body:find("no puede reiniciar", 1, true) ~= nil)
+        (f.shown[1] or {}).body ~= nil and f.shown[1].body:find("no puede reiniciar", 1, true) ~= nil)
     FireEvent("TIME_PLAYED_MSG", 600); FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 10)
-    check("11e. una vez hecha no se repite nada: ni peticiones, ni eventos, ni avisos", f.requests == 1 and f.emitted == 1 and #f.shown == 1)
+    check("11e. una respuesta válida no produce una segunda comprobación en la sesión: ni más peticiones, ni eventos, ni avisos",
+        f.requests == 1 and f.emitted == 1 and #f.shown == 1)
 end
 
 do
     local cases = {
-        { "11f. más de 30 min jugados: se da por hecha y no se avisa", 1, 4000, 3, true, false },
-        { "11g. sin progreso guardado: se da por hecha y no se avisa", 1, 60, 0, true, false },
+        { "11f. más de 30 min jugados: la comprobación se completa (resultado válido negativo) y no se avisa", 1, 4000, 3 },
+        { "11g. sin progreso guardado: la comprobación se completa (resultado válido negativo) y no se avisa", 1, 60, 0 },
     }
     for _, case in ipairs(cases) do
         Boot(nil, QUIET)
@@ -372,51 +371,101 @@ do
         f.check:Init()
         FireEvent("PLAYER_ENTERING_WORLD")
         FireEvent("TIME_PLAYED_MSG", case[3])
-        check(case[1], f.emitted == 0 and #f.shown == 0 and f.check:IsDone() == case[5])
+        f.count = 5
+        FireEvent("TIME_PLAYED_MSG", 60); FireEvent("PLAYER_ENTERING_WORLD")
+        check(case[1] .. " (y una respuesta posterior que sí cumpliría no la reabre)",
+            f.emitted == 0 and #f.shown == 0 and f.check:IsCompleted() and f.requests == 1)
     end
     Boot(nil, QUIET)
     local f = MakeFresh({ level = 2 })
     f.check:Init()
     FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 60)
     check("11h. nivel distinto de 1: no se pide el tiempo jugado, y un /played manual posterior no provoca ningún aviso (desviación respecto al original)",
-        f.requests == 0 and f.emitted == 0 and #f.shown == 0 and not f.check:IsDone())
+        f.requests == 0 and f.emitted == 0 and #f.shown == 0 and not f.check:IsCompleted())
     Boot(nil, QUIET)
     local g = MakeFresh()
     g.check:Init()
     FireEvent("TIME_PLAYED_MSG", 60)
-    check("11i. una respuesta de tiempo jugado sin petición propia se ignora", g.emitted == 0 and not g.check:IsDone())
+    check("11i. una respuesta de tiempo jugado sin petición propia se ignora", g.emitted == 0 and not g.check:IsCompleted())
     FireEvent("PLAYER_ENTERING_WORLD")
-    FireEvent("TIME_PLAYED_MSG", "mucho"); FireEvent("TIME_PLAYED_MSG", -5); FireEvent("TIME_PLAYED_MSG", 0 / 0); FireEvent("TIME_PLAYED_MSG")
-    check("11j. un tiempo que no es un número válido se ignora sin marcar nada", g.emitted == 0 and not g.check:IsDone())
+    local okEvent = pcall(FireEvent, "TIME_PLAYED_MSG", "mucho")
+    check("11j. un tiempo que no es un número válido es desconocido: no lanza error, no avisa y NO completa la comprobación", okEvent and g.emitted == 0 and not g.check:IsCompleted())
+    FireEvent("TIME_PLAYED_MSG", 60); FireEvent("PLAYER_ENTERING_WORLD")
+    check("11j2. y no se reintenta en la misma sesión: la petición es única y la respuesta ya se consumió", g.requests == 1 and g.emitted == 0 and not g.check:IsCompleted())
     Boot(nil, QUIET)
     local h = MakeFresh({ discovery = { IsReady = function() return false end, Count = function() return 9 end } })
     h.check:Init()
     FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 60)
-    check("11k. con Discovery no listo el resultado es desconocido: no se avisa y NO se marca como hecha (se podrá reintentar)",
-        h.emitted == 0 and not h.check:IsDone())
+    check("11k. con Discovery no listo el resultado es DESCONOCIDO: no se avisa, no se trata como una detección negativa válida y NO se completa",
+        h.emitted == 0 and #h.shown == 0 and not h.check:IsCompleted() and h.requests == 1)
+    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 60)
+    check("11l. con Discovery que falla ocurre lo mismo y la sesión no se queda marcada como comprobada",
+        (function()
+            local broken = MakeFresh({ discovery = { IsReady = function() error("roto") end, Count = function() return 9 end } })
+            broken.check:Init()
+            FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 60)
+            return broken.emitted == 0 and not broken.check:IsCompleted()
+        end)())
 end
 
 do
-    Boot({ schemaVersion = 1, discovery = { entries = { ["zone:dun_morogh"] = {} } }, freshCheck = { done = true } })
-    check("12. con la marca de hecha guardada de una sesión anterior no se pide nada: ni tiempo jugado ni aviso",
-        (function()
-            FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 60)
-            return MockClient.playedRequests == 0 and not Chronicle.Popup:IsVisible()
-        end)())
-    Boot({ schemaVersion = 1, discovery = { entries = { ["zone:dun_morogh"] = {} } } })
-    local before = Chronicle.Utils.DeepCopy(ChronicleCharDB.discovery)
+    -- El control de repetición vive en memoria: una instancia NUEVA (otra sesión) vuelve a comprobar aunque lo persistente traiga la marca antigua.
+    local legacy = { schemaVersion = 1, discovery = { entries = { ["zone:dun_morogh"] = {} } }, freshCheck = { done = true } }
+    Boot(legacy)
+    local setCalls = 0
+    local realSet = Chronicle.State.Set
+    Chronicle.State.Set = function(self, ...) setCalls = setCalls + 1; return realSet(self, ...) end
+    local before = Chronicle.Utils.DeepCopy(ChronicleCharDB)
     FireEvent("PLAYER_ENTERING_WORLD")
-    check("12b. integrado con el addon real: nivel 1 con progreso guardado pide el tiempo jugado una vez", MockClient.playedRequests == 1)
+    check("12. SavedVariables heredadas con la marca antigua freshCheck.done = true NO bloquean la comprobación: se pide el tiempo jugado",
+        MockClient.playedRequests == 1 and ChronicleCharDB.freshCheck.done == true)
     FireEvent("TIME_PLAYED_MSG", 300)
-    check("12c. y muestra el aviso real en el Popup, marca la comprobación como hecha en State y NO toca el progreso de Discovery",
-        Chronicle.Popup:IsVisible() and Chronicle.Popup:GetContent().title == "Chronicle" and (ChronicleCharDB.freshCheck or {}).done == true
-            and deepEqual(before, ChronicleCharDB.discovery) and Chronicle.Discovery:Count() == 1 and Chronicle.Discovery:IsDiscovered("zone:dun_morogh"))
-    Boot({ schemaVersion = 99, discovery = { entries = {} } })
-    check("12d. con State en solo lectura el módulo no se inicializa (no podría recordar la comprobación): queda en Init.failed y el resto sigue",
-        Chronicle.Init.failed.FreshCharacterCheck ~= nil and Chronicle.Init.failed.FreshCharacterCheck:find("solo lectura", 1, true) ~= nil
-            and Chronicle.Codex:IsReady() and Chronicle.Discovery:IsReady())
+    check("12b. y se detecta el progreso heredado: aviso real en el Popup (con el addon completo)",
+        Chronicle.Popup:IsVisible() and Chronicle.Popup:GetContent().title == "Chronicle" and Chronicle.Popup:GetContent().body:find("progreso guardado", 1, true) ~= nil)
+    check("12c. el módulo NO escribe ninguna marca: State:Set no se llamó, las SavedVariables son idénticas (también la marca antigua, que no se toca) y el progreso de Discovery está intacto",
+        setCalls == 0 and deepEqual(before, ChronicleCharDB) and Chronicle.Discovery:Count() == 1 and Chronicle.Discovery:IsDiscovered("zone:dun_morogh"))
+    FireEvent("TIME_PLAYED_MSG", 300); FireEvent("PLAYER_ENTERING_WORLD")
+    check("12d. dentro de la sesión no se repite: una sola petición y un solo aviso", MockClient.playedRequests == 1)
+
+    -- otra sesión con las mismas SavedVariables: vuelve a comprobar y, si las condiciones siguen cumpliéndose, el aviso puede repetirse
+    local saved = ChronicleCharDB
+    Boot(saved)
+    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 300)
+    check("12e. una sesión nueva con las mismas SavedVariables vuelve a comprobar y, mientras se cumplan las condiciones, el aviso PUEDE repetirse (consecuencia aceptada)",
+        MockClient.playedRequests == 1 and Chronicle.Popup:IsVisible() and Chronicle.Popup:GetContent().body:find("progreso guardado", 1, true) ~= nil)
+
+    -- una instancia nueva aislada, con State que trae la marca antigua
+    Boot({ schemaVersion = 1, discovery = { entries = {} }, freshCheck = { done = true } }, QUIET)
+    local f = MakeFresh()
+    f.check:Init()
+    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 600)
+    check("12f. una instancia nueva puede comprobarse aunque el estado persistente tenga freshCheck.done = true: pide, detecta y avisa",
+        f.requests == 1 and f.emitted == 1 and #f.shown == 1 and f.check:IsCompleted())
+    check("12g. y no escribió nada: ninguna clave nueva en las SavedVariables",
+        deepEqual(ChronicleCharDB, { schemaVersion = 1, discovery = { entries = {} }, freshCheck = { done = true } }))
+end
+
+do
+    -- sin marca persistente en ningún caso (ni con detección, ni sin ella, ni con resultado desconocido)
+    for _, scenario in ipairs({
+        { "detección", 300, true }, { "sin detección (mucho tiempo jugado)", 9000, true }, { "resultado desconocido", "x", true },
+    }) do
+        Boot({ schemaVersion = 1, discovery = { entries = { ["zone:dun_morogh"] = {} } } })
+        local initial = Chronicle.Utils.DeepCopy(ChronicleCharDB)
+        FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", scenario[2])
+        check("13. no se escribe ninguna marca de finalización en State ni en las SavedVariables (" .. scenario[1] .. ")",
+            ChronicleCharDB.freshCheck == nil and Chronicle.State:Get("freshCheck") == nil and deepEqual(initial, ChronicleCharDB))
+    end
+    Boot({ schemaVersion = 99, discovery = { entries = { ["zone:dun_morogh"] = {} } } })
+    check("13b. con State en solo lectura el módulo ya no depende de él: se inicializa y funciona sin escribir",
+        Chronicle.Init.failed.FreshCharacterCheck == nil and Chronicle.FreshCharacterCheck:IsReady())
+    FireEvent("PLAYER_ENTERING_WORLD"); FireEvent("TIME_PLAYED_MSG", 300)
+    check("13c. y detecta igualmente el progreso heredado", MockClient.playedRequests == 1 and Chronicle.Popup:IsVisible())
+    Boot(nil, function() Chronicle.State.Init = function() error("estado roto") end end)
+    check("13d. si State falla, Discovery y FreshCharacterCheck se omiten en cadena (FreshCharacterCheck ya solo depende de Discovery, no de State)",
+        Chronicle.Init.skipped.Discovery ~= nil and Chronicle.Init.skipped.FreshCharacterCheck ~= nil)
     Boot(nil, function() Chronicle.Discovery.Init = function() error("discovery roto") end end)
-    check("12e. si Discovery falla el módulo se omite (depende de Discovery) sin romper el Codex, el Popup ni el minimapa",
+    check("13e. si Discovery falla el módulo se omite (depende de Discovery) sin romper el Codex, el Popup ni el minimapa",
         Chronicle.Init.skipped.FreshCharacterCheck ~= nil and Chronicle.Codex:IsReady() and Chronicle.Popup:IsReady() and Chronicle.MinimapButton:IsReady())
 end
 
@@ -819,14 +868,14 @@ local function codeOf(name)
 end
 local NEW = { "Core/Options.lua", "Core/FreshCharacterCheck.lua", "Services/Trivia.lua", "UI/OptionsPanel.lua", "UI/MinimapButton.lua", "UI/Commands.lua" }
 
-check("26. ningún módulo nuevo referencia la SavedVariable, y solo Options y FreshCharacterCheck nombran State (para persistir), ninguno escribe sus rutas a mano",
+check("26. ningún módulo nuevo referencia la SavedVariable, y solo Options nombra State (para persistir; FreshCharacterCheck ya no lo necesita), ninguno escribe sus rutas a mano",
     (function()
         for _, name in ipairs(NEW) do
             local lines = codeOf(name)
             if not lines then return false, name .. " no está en el .toc" end
             for _, line in ipairs(lines) do
                 if line:find("ChronicleCharDB", 1, true) then return false, name end
-                if line:find("Chronicle.State", 1, true) and name ~= "Core/Options.lua" and name ~= "Core/FreshCharacterCheck.lua" then return false, name .. ": State" end
+                if line:find("Chronicle.State", 1, true) and name ~= "Core/Options.lua" then return false, name .. ": State" end
             end
         end
         return true

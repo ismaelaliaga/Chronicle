@@ -61,7 +61,7 @@ local MODULES = {
     -- `requires` solo nombra lo que el módulo NO puede usar sin esa pieza; el resto de dependencias (Popup, Codex...) se comprueba al usarlas.
     { name = "Options", required = false, requires = { "State" } }, -- preferencias, guardadas con State
     { name = "Trivia", required = false, requires = { "Options" } },
-    { name = "FreshCharacterCheck", required = false, requires = { "State", "Discovery" } },
+    { name = "FreshCharacterCheck", required = false, requires = { "Discovery" } },
     { name = "OptionsPanel", required = false, requires = { "Options", "Theme" } },
     { name = "MinimapButton", required = false, requires = { "Theme" } }, -- sin Options usa la posición predeterminada y no la guarda
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él

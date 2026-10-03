@@ -1,13 +1,13 @@
 Chronicle = Chronicle or {}
 
--- FreshCharacterCheck: detecta, UNA sola vez por personaje, que un personaje recién creado (nivel 1, poco tiempo jugado) ya tiene progreso de
--- Chronicle guardado. Servicio aislado: no reinicia, borra ni sobrescribe nada del progreso.
+-- FreshCharacterCheck: detecta que un personaje recién creado (nivel 1, poco tiempo jugado) ya tiene progreso de Chronicle guardado. Servicio
+-- aislado: no reinicia, borra ni sobrescribe nada del progreso y NO ESCRIBE NADA EN NINGÚN SITIO PERSISTENTE.
 --
 -- POR QUÉ EXISTE (comportamiento del addon original, leído en solo lectura). WoW guarda las SavedVariables por personaje usando
 -- nombre+reino. Si se borra un personaje y se crea otro con el MISMO nombre en el mismo reino, el nuevo hereda el fichero del anterior y
 -- Chronicle mostraría un progreso que no es suyo. El original lo detectaba con tres condiciones y preguntaba si reiniciar o mantener.
 --
--- QUÉ DETECTA aquí (las mismas tres condiciones, evaluadas en este orden)
+-- QUÉ DETECTA aquí (las tres condiciones del original, evaluadas en este orden)
 --   1. UnitLevel("player") == 1, comprobado en PLAYER_ENTERING_WORLD.
 --   2. Tiempo jugado total <= 1800 s (30 minutos). Se pide con RequestTimePlayed() y llega, asíncrono, en TIME_PLAYED_MSG (primer argumento:
 --      segundos totales). NOTA: RequestTimePlayed imprime en el chat las líneas de «tiempo jugado» del cliente, como en el original.
@@ -16,24 +16,30 @@ Chronicle = Chronicle or {}
 --   personaje de cualquier nivel (el nivel solo se miraba al entrar). Aquí solo se atiende la respuesta a la petición propia, hecha
 --   únicamente a nivel 1, de modo que el aviso no puede salir en un personaje que no sea nivel 1.
 --
--- CUÁNDO Y CUÁNTAS VECES. La petición se hace como mucho una vez por sesión (PLAYER_ENTERING_WORLD salta en cada pantalla de carga) y la
--- comprobación se da por HECHA al recibir la respuesta válida —gane o pierda, como el original— guardando ("freshCheck", "done") = true
--- con State:Set. Con la marca puesta no se vuelve a hacer nada nunca más para ese personaje. Si State no está listo o está en solo lectura,
--- NO se comprueba (no se podría recordar que ya se hizo y se repetiría en cada sesión). Si Discovery no está listo, el resultado es
--- «desconocido»: no se avisa y NO se marca como hecha (se podrá volver a intentar). Una respuesta con un tiempo que no es un número finito
--- >= 0 se ignora sin marcar nada.
+-- CUÁNTAS VECES: COMO MÁXIMO UNA POR SESIÓN, y el control vive SOLO EN MEMORIA, dentro de la instancia.
+--   · NO HAY MARCA PERSISTENTE. El original guardaba «ya comprobado» en la SavedVariable, y esa marca es precisamente lo que NO puede
+--     usarse aquí: se guardaría en el mismo fichero que hereda el personaje nuevo con el nombre de uno antiguo, así que si el anterior ya la
+--     había escrito, el nuevo se saltaría la comprobación y nunca recibiría el aviso. Una marca en esas SavedVariables no garantiza que ESTE
+--     personaje se haya comprobado. Por eso este módulo no necesita State y no escribe nada.
+--   · Petición: PLAYER_ENTERING_WORLD salta en cada pantalla de carga, pero el tiempo jugado se pide UNA sola vez por sesión (aunque el
+--     resultado sea desconocido: no se reintenta en la misma sesión).
+--   · Comprobación completada: con una respuesta VÁLIDA (tiempo numérico finito >= 0 y Discovery listo) la comprobación se da por completada
+--     en esta sesión —cumpla o no las condiciones— y no se procesa ninguna respuesta más. Con un resultado DESCONOCIDO (tiempo no válido,
+--     Discovery no listo, ausente o que falla) NO se da por completada: no se afirma nada, no se avisa y no se guarda nada.
+--   · Una sesión nueva (nueva instancia) vuelve a comprobar: así el personaje nuevo hereda la comprobación aunque las SavedVariables traigan
+--     progreso y cualquier marca antigua (p. ej. una `freshCheck.done = true` escrita por la versión anterior de este módulo, que se ignora).
+--   CONSECUENCIA ACEPTADA: mientras el personaje siga cumpliendo las condiciones (nivel 1, ≤ 30 min jugados y progreso guardado), el aviso PUEDE
+--   VOLVER A APARECER en otra sesión. Es deliberado: evitarlo exigiría una marca persistente, que es lo que se ha descartado.
 --
 -- QUÉ HACE CON EL RESULTADO. Si las tres condiciones se cumplen: emite «Chronicle.FreshCharacter.Detected» (sin argumentos) por el bus de
 -- eventos y, si hay Popup, encola un aviso informativo. El original ofrecía además «Reiniciar» o «Mantener»; REINICIAR NO SE OFRECE porque
--- Discovery no tiene (ni se le ha añadido en esta fase) una operación de reinicio; el aviso lo dice con claridad. Es una decisión pendiente
--- del supervisor (ver docs/fase12_integraciones.md).
+-- Discovery no tiene (ni se le ha añadido) una operación de reinicio; el aviso lo dice con claridad (decisión pendiente del supervisor).
 --
 -- CONTRATO
 --   FreshCharacterCheck:Evaluate(level, playedSeconds) -> "fresh" | "not_fresh" | "unknown"   (función pura sobre los datos + Discovery)
---   FreshCharacterCheck:IsDone() -> true si ya se comprobó en este personaje (lee State)
---   FreshCharacterCheck:Init() / IsReady()   Init es idempotente: crea UN frame y registra los dos eventos UNA vez. Lanza error si falta
---     lo imprescindible (State listo y no de solo lectura, CreateFrame).
---   FreshCharacterCheck.New({ state, discovery, popup, events, createFrame, unitLevel, requestTimePlayed }) crea otra instancia (pruebas).
+--   FreshCharacterCheck:IsCompleted() -> true si en ESTA sesión ya se procesó una respuesta válida (solo memoria)
+--   FreshCharacterCheck:Init() / IsReady()   Init es idempotente: crea UN frame y registra los dos eventos UNA vez. Lanza error si falta CreateFrame.
+--   FreshCharacterCheck.New({ discovery, popup, events, createFrame, unitLevel, requestTimePlayed }) crea otra instancia (pruebas).
 
 local EVENT_DETECTED = "Chronicle.FreshCharacter.Detected"
 local FRESH_LEVEL = 1
@@ -75,19 +81,13 @@ local function NewCheck(deps)
     local self = {}
     local ready = false
     local frame
-    local requested = false
+    -- Control de repetición: SOLO en memoria (ver la cabecera).
+    local requested = false -- ya se pidió el tiempo jugado en esta sesión (una sola vez)
+    local pending = false -- hay una petición propia sin responder
+    local completed = false -- ya se procesó una respuesta válida en esta sesión
 
-    local function State()
-        local state = Dep("state")
-        if IsObject(state) and type(state.Get) == "function" and type(state.Set) == "function" then
-            return state
-        end
-        return nil
-    end
-
-    function self:IsDone()
-        local state = State()
-        return state ~= nil and state:Get("freshCheck", "done") == true
+    function self:IsCompleted()
+        return completed
     end
 
     function self:Evaluate(level, playedSeconds)
@@ -127,8 +127,7 @@ local function NewCheck(deps)
     end
 
     local function OnEvent(_, event, totalTimePlayed)
-        local state = State()
-        if not state or not state:IsReady() or state:IsReadOnly() or self:IsDone() then
+        if completed then
             return
         end
         if event == "PLAYER_ENTERING_WORLD" then
@@ -143,16 +142,18 @@ local function NewCheck(deps)
                 return
             end
             requested = true
+            pending = true
             deps.requestTimePlayed()
         elseif event == "TIME_PLAYED_MSG" then
-            if not requested then
+            if not pending then
                 return
             end
+            pending = false -- la respuesta a la petición propia se consume, sea válida o no
             local outcome = self:Evaluate(FRESH_LEVEL, totalTimePlayed)
             if outcome == "unknown" then
-                return
+                return -- no se da por completada ni se afirma nada
             end
-            state:Set(true, "freshCheck", "done")
+            completed = true
             if outcome == "fresh" then
                 Notify()
             end
@@ -162,13 +163,6 @@ local function NewCheck(deps)
     function self:Init()
         if ready then
             return
-        end
-        local state = State()
-        if not state or not state:IsReady() then
-            error("FreshCharacterCheck: State no está listo (se inicializa después de State)", 0)
-        end
-        if state:IsReadOnly() then
-            error("FreshCharacterCheck: State está en solo lectura; no se podría recordar la comprobación", 0)
         end
         if type(deps.createFrame) ~= "function" then
             error("FreshCharacterCheck: CreateFrame no está disponible", 0)
@@ -194,7 +188,6 @@ local function NewCheck(deps)
 end
 
 Chronicle.FreshCharacterCheck = NewCheck({
-    state = function() return Chronicle.State end,
     discovery = function() return Chronicle.Discovery end,
     popup = function() return Chronicle.Popup end,
     events = function() return Chronicle.Events end,

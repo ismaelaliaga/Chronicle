@@ -20,10 +20,10 @@ Se leyeron `Chronicle.toc`, `Core/Init.lua`, `Slash.lua`, `State.lua`, `Events.l
 | Panel de opciones | `UI/OptionsPanel.lua` + `Core/Options.lua` | no existía | `Theme:ApplyText`, `Options` |
 | Comandos | `Core/Init.lua` (varios subcomandos) | `Slash:Register`, solo `/chronicle` (estado) | `Slash:Register` |
 | Trivia | `Core/Trivia.lua` + `Data/Trivia.lua` | no existía | `Popup:Enqueue`, `Resolver`, `Discovery:IsDiscovered` |
-| FreshCharacterCheck | `Core/FreshCharacterCheck.lua` | no existía | `State`, `Discovery:Count`, `Popup`, `Events` |
+| FreshCharacterCheck | `Core/FreshCharacterCheck.lua` | no existía | `Discovery:Count`, `Popup`, `Events` (**ya no `State`**, ver 4.5) |
 
 Hallazgos que condicionan el diseño **[verificado en código]**:
-- `State:Set(valor, ruta...)` crea los contenedores intermedios al escribir, así que `("options", nombre)` y `("freshCheck", "done")` se guardan
+- `State:Set(valor, ruta...)` crea los contenedores intermedios al escribir, así que `("options", nombre)` se guarda
   **sin tocar `schemaVersion`, el estado inicial de State ni Discovery**, y sin escribir nada al arrancar.
 - `Discovery` **no tiene operación de reinicio** (`ResetAll` del original no existe) y no debía modificarse en esta fase.
 - Las pruebas de arquitectura existentes prohíben que los *Services* referencien `Chronicle.State` (salvo Discovery) y que haya rutas de
@@ -43,7 +43,7 @@ de `Core/Init.lua`.
 |---|---|---|
 | `Options` | `State` | `Init.failed` / `Init.skipped`; Trivia y el panel se omiten |
 | `Trivia` | `Options` | idem |
-| `FreshCharacterCheck` | `State`, `Discovery` | se omite si Discovery falla; falla si State es de solo lectura |
+| `FreshCharacterCheck` | `Discovery` (ya no `State`) | se omite si Discovery falla; con State de solo lectura funciona igual (no escribe nada) |
 | `OptionsPanel` | `Options`, `Theme` | se omite |
 | `MinimapButton` | `Theme` | se omite; **no** depende de Options (sin ellas usa la posición predeterminada y no guarda) |
 | `Slash` → `Commands` | `Slash` | los comandos se omiten |
@@ -130,10 +130,21 @@ WoW guarda las SavedVariables por nombre+reino, así que borrar un personaje y c
 **Cuándo se ejecuta:** en `PLAYER_ENTERING_WORLD`, si `UnitLevel("player") == 1`, pide el tiempo jugado (`RequestTimePlayed`, que imprime en el chat
 las líneas de «tiempo jugado» del cliente, como el original) **una vez por sesión**; la respuesta llega en `TIME_PLAYED_MSG`.
 **Condiciones:** nivel 1, tiempo ≤ 1800 s y `Discovery:Count() > 0` (se pregunta a Discovery; no se lee la SavedVariable).
-**Una sola vez por personaje:** al recibir una respuesta válida se guarda `("freshCheck", "done") = true` con `State:Set` —gane o pierda, como el
-original— y no se vuelve a hacer nada. **Faltan datos:** tiempo no numérico/negativo → se ignora sin marcar nada; Discovery no listo → «desconocido»:
-no se avisa y **no** se marca como hecha; State no listo o de solo lectura → el módulo no se inicializa (no podría recordar que ya comprobó).
-**Qué consume el resultado:** emite `Chronicle.FreshCharacter.Detected` (sin argumentos) y, si hay Popup, encola un aviso **informativo**.
+**Control de repetición: como máximo una vez por SESIÓN, solo en memoria** (corrección posterior a la primera entrega). La petición del tiempo jugado
+se hace una sola vez por sesión aunque `PLAYER_ENTERING_WORLD` salte varias veces. Con una respuesta **válida** (tiempo numérico finito ≥ 0 y Discovery
+listo) la comprobación queda **completada en esa sesión** —cumpla o no las condiciones— y no se procesa ninguna respuesta más. Con un resultado
+**desconocido** (tiempo no válido; Discovery no listo, ausente o que falla) **no** se da por completada, no se avisa y no se escribe nada; tampoco se
+reintenta dentro de la misma sesión (la petición es única y su respuesta se consume).
+
+**Por qué NO hay una marca persistente.** La primera versión guardaba `("freshCheck", "done") = true` en State, como el original. Pero esa marca vive en
+**las mismas SavedVariables que hereda el personaje nuevo con el nombre de uno borrado**: si el anterior ya la había escrito, el nuevo se saltaba la
+comprobación y nunca recibía el aviso. Una marca en esas SavedVariables no garantiza que *este* personaje se haya comprobado, así que no puede usarse
+como garantía. Se eliminó: el módulo **no escribe nada** (ni en State ni en las SavedVariables), no necesita State (se quitó de su configuración en
+`Init.lua`) y **ignora** cualquier `freshCheck.done` heredado, que además deja intacto. Una sesión nueva siempre puede volver a comprobar.
+**Consecuencia aceptada: mientras el personaje siga cumpliendo las condiciones (nivel 1, ≤ 30 min jugados y progreso guardado) el aviso puede volver a
+aparecer en otra sesión.** No se evita con ninguna marca persistente.
+
+**Faltan datos:** tiempo no numérico/negativo → desconocido; Discovery no listo → desconocido (nunca se asume progreso). **Qué consume el resultado:** emite `Chronicle.FreshCharacter.Detected` (sin argumentos) y, si hay Popup, encola un aviso **informativo**.
 **No reinicia, borra ni sobrescribe nada** (hay una prueba y una mutación que lo exigen).
 **Desviaciones del original [verificado en código]:** (1) solo atiende la respuesta a su propia petición (el original atendía cualquier
 `TIME_PLAYED_MSG`, incluido un `/played` manual en un personaje de otro nivel); (2) **no ofrece «Reiniciar»**, porque Discovery no tiene reinicio:
@@ -161,7 +172,7 @@ APIs de posición (`C_Map...`) ya estaban sin verificar desde la Fase 6.
 
 ## 7. Verificación
 
-`npm test` desde `tests`: **1512 superadas, 0 fallidas, código de salida 0** (1356 de las fases 1 a 11 y 156 nuevas de `tests/integrations_tests.lua`). Son
+`npm test` desde `tests`: **1523 superadas, 0 fallidas, código de salida 0** (1356 de las fases 1 a 11 y 167 de `tests/integrations_tests.lua`; ver «Corrección de FreshCharacterCheck» al final de esta sección). Son
 pruebas con el **mock estricto** (se añadieron al mock `Minimap`, `GameTooltip`, `GetCursorPosition`, `GetTime`, `C_Timer`, `UnitLevel`, `UnitOnTaxi`,
 `RequestTimePlayed`, `InterfaceOptions_*`, `CheckButton`); **no demuestran** que esas APIs existan ni se comporten así en el cliente real.
 
@@ -197,10 +208,32 @@ además un **defecto real** del botón: si su construcción fallaba a medias, re
 oculto y reintentar da el mismo error. Tras corregirlo se repitió la batería completa desde un estado limpio. No se interrumpió ninguna ejecución.
 
 
+### Corrección de FreshCharacterCheck (marca persistente retirada)
+
+Defecto detectado por el supervisor en la entrega `96bec01`: la marca persistente `freshCheck.done` se heredaba con el progreso del personaje anterior y
+podía impedir el aviso en el nuevo (ver 4.5). Corrección: el control de repetición pasa a **memoria de la instancia**, por sesión; se eliminan la marca y
+la dependencia de State (módulo, `Init.lua` y pruebas). **No cambian** las condiciones de detección, el uso de Discovery por su API pública, la
+inicialización idempotente ni la protección contra eventos duplicados.
+
+Pruebas (11 más en esta corrección; ninguna eliminada o debilitada salvo las que afirmaban lo contrario de lo corregido y se reescribieron): una comprobación
+válida se procesa una vez por sesión; `PLAYER_ENTERING_WORLD` repetido no duplica peticiones; una respuesta válida no genera una segunda comprobación (ni
+tras un resultado negativo); un resultado desconocido (Discovery no listo o que falla, tiempo inválido) **no** cuenta como detección negativa válida ni
+completa la sesión; **una instancia nueva comprueba de nuevo aunque las SavedVariables traigan `freshCheck.done = true`** (simulado explícitamente con el
+addon completo y con una instancia aislada); no se escribe ninguna marca (`State:Set` no se llama y las SavedVariables, incluida la marca antigua, quedan
+idénticas); se conserva la detección de progreso heredado; no hay aviso si no se cumplen las condiciones; y una segunda sesión con las mismas SavedVariables
+puede volver a avisar. Pruebas reescritas: las que exigían guardar la marca, que State de solo lectura impidiera inicializar y que `Init` dependiera de State.
+
+Mutaciones de esta corrección: **18, las 18 detectadas por aserciones claras**; una (`R17`, aceptar un tiempo no numérico) deja además una excepción
+posterior. Cubren guardar una marca persistente, dejar que una marca antigua bloquee, pedir el tiempo en cada pantalla de carga, atender respuestas sin
+petición propia, completar con un resultado desconocido o no completar con uno válido, procesar respuestas tras completar, permitir pedir otra vez, no
+comprobar el nivel, el umbral, el progreso, el aviso, el borrado de Discovery, asumir progreso sin Discovery, frames duplicados, la dependencia de Discovery,
+tiempos no válidos y el nivel exigido. Primera pasada: 17 de 18; el mutante no detectado (quitar la guarda de «completada») era **equivalente** por doble
+guarda (la petición única y la respuesta consumida ya impiden reprocesar) y se sustituyó por quitar ambas. Ficheros restaurados y verificados idénticos.
+
 ## 8. Decisiones que requieren al supervisor
 
-1. **Persistencia nueva en `ChronicleCharDB`:** `options` y `freshCheck` aparecen **solo al escribirse**, por `State:Set`, sin cambiar `schemaVersion`
-   ni el estado inicial. Si se considera un cambio de estructura que exige declararlo en `State`/migración, hay que decidirlo.
+1. **Persistencia nueva en `ChronicleCharDB`:** `options` aparece **solo al escribirse**, por `State:Set`, sin cambiar `schemaVersion`
+   ni el estado inicial (FreshCharacterCheck ya no escribe nada). Si se considera un cambio de estructura que exige declararlo en `State`/migración, hay que decidirlo.
 2. **Trivia sin preguntas:** el original son curiosidades, no un quiz.
 3. **Guardián de Discovery en Trivia:** hace que, con poco descubierto, no salga ninguna curiosidad.
 4. **Reinicio de progreso:** pospuesto hasta que Discovery tenga esa operación.
