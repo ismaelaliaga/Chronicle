@@ -275,22 +275,31 @@ local function NewCodex(deps)
         RefreshViews(model:AffectsPage(id))
     end
 
-    -- Se suscribe al evento de Discovery si hay con qué (bus, servicio listo y nombre del evento). Una sola vez.
+    -- Se suscribe al evento de Discovery si hay con qué (bus, servicio listo y nombre del evento). Una sola vez. Discovery es
+    -- una dependencia OPCIONAL, así que esta función NO PUEDE lanzar errores: se llama con la ventana ya construida y el
+    -- Codex marcado como listo. Obtener un servicio o preguntarle si está listo puede fallar; en ese caso el servicio cuenta
+    -- como no disponible (el modelo lo comunica una sola vez), no hay suscripción y cada apertura repinta por completo.
     local function Subscribe()
-        local events, discovery = Dep("events"), Dep("discovery")
-        if not IsObject(events) or type(events.Register) ~= "function" or not IsObject(discovery)
-            or type(discovery.IsReady) ~= "function" or discovery:IsReady() ~= true then
+        if not model or not model:IsDiscoveryReady() then
+            return
+        end
+        local okEvents, events = pcall(Dep, "events")
+        local okDiscovery, discovery = pcall(Dep, "discovery")
+        if not okEvents or not okDiscovery or not IsObject(events) or type(events.Register) ~= "function"
+            or not IsObject(discovery) then
             return
         end
         local eventName = discovery.EVENT_DISCOVERED or DEFAULT_EVENT_DISCOVERED
         if type(eventName) ~= "string" or eventName == "" then
             return
         end
-        local ok, err = pcall(events.Register, events, eventName, OnDiscovered)
-        if ok then
+        local ok, added = pcall(events.Register, events, eventName, OnDiscovered)
+        if not ok then
+            ReportError("Chronicle.Codex: no se pudo suscribir al aviso de Discovery: " .. tostring(added))
+        elseif added == true then
+            -- Contrato de Events:Register: true = manejador añadido; false = esa misma función ya estaba (no es una
+            -- suscripción nueva que este Codex pueda dar por hecha), así que solo `true` cuenta como suscripción activa.
             subscribed = true
-        else
-            ReportError("Chronicle.Codex: no se pudo suscribir al aviso de Discovery: " .. tostring(err))
         end
     end
 

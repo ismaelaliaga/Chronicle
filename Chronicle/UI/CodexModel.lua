@@ -25,6 +25,8 @@ Chronicle = Chronicle or {}
 --   m:GetRows()                 -> lista de filas visibles del árbol, en orden: { id, depth, name, nameIsFallback, type,
 --                                  hasChildren, expanded, selected, locked }
 --   m:IsDiscovered(id)          -> true | false (ver «Descubrimiento»); false para un ID desconocido
+--   m:IsDiscoveryReady()        -> true solo si el servicio existe y IsReady() == true; cualquier fallo es false (y se comunica
+--                                  una vez). Es lo que usa el Codex para decidir si se suscribe a los avisos.
 --   m:AffectsPage(id)           -> true si la página actual cambia al descubrirse `id` (ella misma o su ubicación)
 --   m:GetChildren(id)           -> IDs de los hijos del nodo, ordenados (ver «Árbol»)
 --   m:Select(id)                -> true | false, "invalid_id" | "unknown_id"      muestra la página y la anota en el historial
@@ -158,20 +160,28 @@ local function NewModel(deps)
     end
 
     -- Una entidad solo está descubierta si el servicio lo confirma; cualquier duda es «bloqueada».
-    function self:IsDiscovered(id)
-        if not Known(id) then
-            return false
-        end
+    -- El servicio de descubrimiento, o nil si no se puede obtener (un error al obtenerlo se comunica una vez).
+    local function Service()
         local service = deps.discovery
         if type(service) == "function" then
             local ok, resolved = pcall(service)
             if not ok then
                 ReportOnce("Chronicle.CodexModel: no se pudo obtener Discovery: " .. tostring(resolved))
-                return false
+                return nil
             end
             service = resolved
         end
         if type(service) ~= "table" or type(service.IsReady) ~= "function" or type(service.IsDiscovered) ~= "function" then
+            return nil
+        end
+        return service
+    end
+
+    -- ¿Hay un Discovery utilizable? Solo si existe y confirma con un `true` exacto que está listo. Un error al consultarlo
+    -- (o al obtenerlo) significa «no disponible» y se comunica una vez; nunca se propaga.
+    function self:IsDiscoveryReady()
+        local service = Service()
+        if not service then
             return false
         end
         local okReady, ready = pcall(service.IsReady, service)
@@ -179,7 +189,18 @@ local function NewModel(deps)
             ReportOnce("Chronicle.CodexModel: error al consultar Discovery:IsReady: " .. tostring(ready))
             return false
         end
-        if ready ~= true then
+        return ready == true
+    end
+
+    function self:IsDiscovered(id)
+        if not Known(id) then
+            return false
+        end
+        if not self:IsDiscoveryReady() then
+            return false
+        end
+        local service = Service()
+        if not service then
             return false
         end
         local ok, discovered = pcall(service.IsDiscovered, service, id)

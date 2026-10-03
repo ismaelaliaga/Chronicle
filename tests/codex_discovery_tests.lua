@@ -310,8 +310,8 @@ do
         { "sin IsDiscovered", { IsReady = function() return true end } },
         { "IsReady devuelve false", (function() local d = Disc(); d.set["npc:sage"] = true; d.ready = false; return d end)() },
         { "IsReady devuelve algo que no es true", (function() local d = Disc(); d.set["npc:sage"] = true; d.ready = "sí"; return d end)() },
-        { "IsDiscovered devuelve algo que no es true", { IsReady = function() return true end, IsDiscovered = function() return "true" end } },
-        { "IsDiscovered devuelve 1", { IsReady = function() return true end, IsDiscovered = function() return 1 end } },
+        { "IsDiscovered devuelve algo que no es true", { IsReady = function() return true end, IsDiscovered = function() return "true" end }, true },
+        { "IsDiscovered devuelve 1", { IsReady = function() return true end, IsDiscovered = function() return 1 end }, true },
         { "una función que devuelve nil", function() return nil end },
     }
     local allLocked = true
@@ -323,7 +323,8 @@ do
         local okRows, rows = pcall(m.GetRows, m)
         local rowsLocked = okRows and #rows > 0
         if okRows then for _, row in ipairs(rows) do if row.name ~= "???" or row.locked ~= true then rowsLocked = false end end end
-        if not (ok and name == "???" and okPage and page.locked == true and rowsLocked) then
+        local okReady, discoveryReady = pcall(m.IsDiscoveryReady, m)
+        if not (ok and name == "???" and okPage and page.locked == true and rowsLocked and okReady and discoveryReady == (case[3] == true)) then
             allLocked = false
             failing = failing .. case[1] .. "; "
         end
@@ -782,6 +783,250 @@ do
     check("22. si a Theme le falta el color LOCKED, el Codex no se inicializa, lo dice y no crea ningún frame",
         ok == false and tostring(err):find("LOCKED", 1, true) ~= nil and frames == 0 and codex:IsReady() == false)
 end
+
+
+-- ===================== Corrección: la suscripción a Discovery no puede romper la inicialización =====================
+-- Regresión: Subscribe() preguntaba Discovery:IsReady() (y obtenía la dependencia) sin protección, DESPUÉS de construir la ventana
+-- y marcar el Codex como listo; un error ahí salía de Init() con el Codex ya construido. Discovery es opcional.
+local function SpyBus(register)
+    local bus = { handlers = {}, calls = 0 }
+    function bus:Register(name, callback)
+        bus.calls = bus.calls + 1
+        if register then return register(name, callback) end
+        bus.handlers[#bus.handlers + 1] = callback
+        return true
+    end
+    function bus:Emit(name, ...)
+        for _, callback in ipairs(bus.handlers) do callback(...) end
+    end
+    return bus
+end
+local function countReports(fragment, from)
+    local n = 0
+    for i = (from or 0) + 1, #ReportedErrors do
+        if ReportedErrors[i]:find(fragment, 1, true) then n = n + 1 end
+    end
+    return n
+end
+local function allLocked(ui)
+    local labels = ui.labels()
+    if #labels == 0 then return false end
+    for _, label in ipairs(labels) do if label ~= "???" then return false end end
+    return true
+end
+
+do
+    Boot(nil, true)
+    CreateFrame = realCreateFrame
+    local reg2, loc2 = SecretWorld()
+
+    -- 1. obtener Discovery lanza un error
+    local bus = SpyBus()
+    local before = #ReportedErrors
+    local frames = {}
+    local codex = Chronicle.Codex.New({
+        theme = Chronicle.Theme, registry = reg2, localization = loc2,
+        discovery = function() error("sin servicio de descubrimiento") end, events = bus,
+        uiParent = UIParent, specialFrames = {},
+        createFrame = function(...) local f = realCreateFrame(...); frames[#frames + 1] = f; return f end,
+    })
+    local okInit, errInit = pcall(codex.Init, codex)
+    local ui = Inspect(frames)
+    check("R1. si obtener Discovery lanza un error, Init no lanza: el Codex queda inicializado, oculto y con una única ventana",
+        okInit == true and codex:IsReady() == true and codex:IsVisible() == false and ui.win ~= nil and ui.win:IsShown() == false)
+    check("R1b. sin Discovery utilizable no se registra ningún manejador (ni se intenta): el bus no recibe ninguna llamada",
+        bus.calls == 0 and #bus.handlers == 0)
+    check("R1c. todas las entradas quedan bloqueadas: filas «???», página bloqueada y sin datos reales en ningún widget",
+        allLocked(ui) and ui.leak(SECRETS) == nil and ui.leak(SLUGS) == nil)
+    local opened = pcall(function()
+        for _ = 1, 10 do codex:Show(); codex:Hide() end
+        codex:Show()
+        ui.expandAll()
+        for i = 1, #ui.rows() do click(ui.rows()[i].select) end
+        codex:Toggle(); codex:Toggle()
+    end)
+    check("R1d. abrir, cerrar, expandir y seleccionar no lanzan errores, la ventana se abre y cierra de verdad y sigue todo bloqueado",
+        opened and codex:IsVisible() == true and (function() codex:Hide(); return codex:IsVisible() == false end)()
+            and ui.leak(SECRETS) == nil and ui.leak(SLUGS) == nil)
+    check("R1e. el error se comunica UNA sola vez, aunque la ventana se abra y se repinte muchas veces",
+        countReports("sin servicio de descubrimiento", before) == 1)
+end
+
+check("R2x. el bloque de IsReady roto se ejecuta entero sin excepciones (Init no deja escapar el error de Discovery)", pcall(function()
+    Boot(nil, true)
+    CreateFrame = realCreateFrame
+    local reg2, loc2 = SecretWorld()
+
+    -- 2. IsReady lanza un error
+    local d = Disc()
+    d.set["continent:world"] = true
+    d.readyError = true
+    local bus = SpyBus()
+    local before = #ReportedErrors
+    local m = Mount(reg2, loc2, d, { events = bus })
+    check("R2. si Discovery:IsReady lanza un error, el Codex queda inicializado y NO consulta ninguna entrada como descubierta",
+        m.codex:IsReady() == true and d.calls == 0)
+    check("R2b. no queda ningún manejador registrado por error (el bus no recibió llamadas)", bus.calls == 0 and #bus.handlers == 0)
+    m.codex:Show()
+    check("R2c. todas las entradas siguen bloqueadas aunque el estado de una esté marcado como descubierto en el servicio",
+        allLocked(m.ui) and d.calls == 0 and m.ui.leak(SECRETS) == nil)
+    for _ = 1, 10 do m.codex:Hide(); m.codex:Show() end
+    click(m.ui.rows()[1].select); click(m.ui.rows()[1].toggle)
+    check("R2d. el error se comunica una sola vez, no en cada apertura, selección o repintado",
+        countReports("IsReady roto", before) == 1)
+
+    -- 4. sin suscripción, cada apertura refresca el estado consultable
+    d.readyError = false
+    d.set["continent:world"] = true
+    m.codex:Hide(); m.codex:Show()
+    check("R2e. sin suscripción activa, al abrir se repinta con el estado consultable: el servicio ya responde y el continente muestra su nombre",
+        m.ui.labels()[1] == "Mundo Secreto" and d.calls > 0)
+    d.set["continent:world"] = nil
+    d.set["zone:valley"] = true
+    local callsBefore = d.calls
+    bus:Emit(EVENT, "zone:valley")
+    check("R2f. y como no hay manejador, un aviso del bus no hace nada con la ventana visible (nadie lo recibe)",
+        d.calls == callsBefore and m.ui.labels()[1] == "Mundo Secreto")
+end))
+
+do
+    Boot(nil, true)
+    CreateFrame = realCreateFrame
+    local reg2, loc2 = SecretWorld()
+
+    -- 6. comportamiento normal con Discovery disponible
+    local d = Disc()
+    local bus = SpyBus()
+    local before = #ReportedErrors
+    local m = Mount(reg2, loc2, d, { events = bus })
+    check("R3. con Discovery disponible, listo y correcto el Codex se suscribe exactamente una vez",
+        m.codex:IsReady() and bus.calls == 1 and #bus.handlers == 1)
+    for _ = 1, 10 do m.codex:Show(); m.codex:Hide() end
+    m.codex:Init(); m.codex:Init()
+    check("R3b. abrir, cerrar y repetir Init no registran nada más", bus.calls == 1 and #bus.handlers == 1)
+    m.codex:Show()
+    d.set["continent:world"] = true
+    bus:Emit(EVENT, "continent:world")
+    check("R3c. con la ventana visible, el aviso de Discovery repinta: el continente muestra su nombre", m.ui.labels()[1] == "Mundo Secreto")
+    m.codex:Hide()
+    d.set["zone:valley"] = true
+    local callsBefore = d.calls
+    bus:Emit(EVENT, "zone:valley")
+    check("R3d. con la ventana oculta el aviso no pinta nada y se aplica al abrir", d.calls == callsBefore)
+    m.codex:Show()
+    m.ui.expandAll()
+    check("R3e. al abrir se ve el estado actual (el valle descubierto)", (function()
+        for _, label in ipairs(m.ui.labels()) do if label == "Nombre Alternativo" then return true end end
+    end)())
+    check("R3f. sin ningún error comunicado", #ReportedErrors == before)
+end
+
+do
+    Boot(nil, true)
+    CreateFrame = realCreateFrame
+    local reg2, loc2 = SecretWorld()
+
+    -- Events:Register devuelve false (esa función ya estaba registrada): no cuenta como suscripción activa
+    local d = Disc()
+    local rejecting = SpyBus(function() return false end)
+    local before = #ReportedErrors
+    local m = Mount(reg2, loc2, d, { events = rejecting })
+    m.codex:Show()
+    d.set["continent:world"] = true
+    m.codex:Hide(); m.codex:Show()
+    check("R4. si Events:Register no añade el manejador (devuelve false) el Codex no lo da por suscrito: cada apertura repinta con el estado actual",
+        m.codex:IsReady() and rejecting.calls == 1 and m.ui.labels()[1] == "Mundo Secreto" and #ReportedErrors == before)
+
+    -- un fallo de suscripción no hace al Codex dependiente de Discovery ni rompe nada
+    local failingBus = SpyBus(function() error("bus roto") end)
+    local d2 = Disc()
+    local before2 = #ReportedErrors
+    local m2 = Mount(reg2, loc2, d2, { events = failingBus })
+    m2.codex:Show()
+    d2.set["continent:world"] = true
+    m2.codex:Hide(); m2.codex:Show()
+    check("R4b. si Register lanza un error el Codex se inicializa, comunica el fallo una vez y se actualiza al abrir",
+        m2.codex:IsReady() and countReports("bus roto", before2) == 1 and m2.ui.labels()[1] == "Mundo Secreto")
+end
+
+do
+    Boot(nil, true)
+    CreateFrame = realCreateFrame
+    local reg2, loc2 = SecretWorld()
+    local d = Disc()
+    local before = #ReportedErrors
+    local frames = {}
+    local codex = Chronicle.Codex.New({
+        theme = Chronicle.Theme, registry = reg2, localization = loc2, discovery = d,
+        events = function() error("sin bus de eventos") end, uiParent = UIParent, specialFrames = {},
+        createFrame = function(...) local f = realCreateFrame(...); frames[#frames + 1] = f; return f end,
+    })
+    local okInit = pcall(codex.Init, codex)
+    local ui = Inspect(frames)
+    codex:Show()
+    d.set["continent:world"] = true
+    codex:Hide(); codex:Show()
+    check("R6. si obtener el bus de eventos lanza un error, el Codex se inicializa igual, no se suscribe y se actualiza al abrir",
+        okInit and codex:IsReady() and ui.labels()[1] == "Mundo Secreto" and d.calls > 0)
+end
+
+do
+    Boot(nil, true)
+    CreateFrame = realCreateFrame
+    local reg2, loc2 = SecretWorld()
+    -- Un Discovery inestable: obtenerlo falla en las llamadas alternas. Se prueban las dos paridades, así que alguna vez falla justo
+    -- la obtención que hace Subscribe después de que el modelo ya lo obtuvo bien.
+    for offset = 0, 1 do
+        local d = Disc()
+        local n = 0
+        local bus = SpyBus()
+        local before = #ReportedErrors
+        local codex = Chronicle.Codex.New({
+            theme = Chronicle.Theme, registry = reg2, localization = loc2,
+            discovery = function() n = n + 1; if (n + offset) % 2 == 0 then error("servicio inestable") end return d end,
+            events = bus, uiParent = UIParent, specialFrames = {}, createFrame = realCreateFrame,
+        })
+        local okInit, err = pcall(codex.Init, codex)
+        check("R7. un Discovery que falla de forma intermitente nunca hace que Init lance un error (paridad " .. offset .. ")",
+            okInit == true and codex:IsReady() == true and #bus.handlers <= 1)
+        check("R7b. y el Codex sigue siendo utilizable: se abre y se cierra sin errores (paridad " .. offset .. ")",
+            pcall(codex.Show, codex) and codex:IsVisible() and pcall(codex.Hide, codex) and not codex:IsVisible())
+    end
+    local d = Disc()
+    d.EVENT_DISCOVERED = nil
+    local bus = SpyBus()
+    local m = Mount(reg2, loc2, d, { events = bus })
+    local d2 = Disc()
+    d2.EVENT_DISCOVERED = 42
+    local bus2 = SpyBus()
+    local m2 = Mount(reg2, loc2, d2, { events = bus2 })
+    check("R7c. si Discovery no da un nombre de evento válido no se registra nada, y el Codex funciona (se repinta al abrir)",
+        m.codex:IsReady() and bus.calls == 0 and m2.codex:IsReady() and bus2.calls == 0)
+end
+
+do
+    -- 7. a nivel del addon completo: Discovery roto no impide arrancar al resto ni al Codex
+    local registrations = 0
+    Boot(function()
+        Chronicle.Discovery.IsReady = function() error("IsReady roto en el arranque") end
+        local events = Chronicle.Events
+        local original = events.Register
+        events.Register = function(self, name, callback)
+            if name == EVENT then registrations = registrations + 1 end
+            return original(self, name, callback)
+        end
+    end, true)
+    local ui = Inspect(bootedFrames)
+    check("R5. con Discovery:IsReady roto en el arranque completo, el Codex se inicializa igual (no falla ni se omite) y no hay registros del aviso",
+        Chronicle.Codex:IsReady() == true and Chronicle.Init.failed.Codex == nil and Chronicle.Init.skipped.Codex == nil and registrations == 0)
+    check("R5b. los demás servicios y la interfaz arrancan: Registry, Localization, Resolver, Theme y Popup listos",
+        Chronicle.Registry:IsValidated() and Chronicle.Localization:IsReady() and Chronicle.Resolver:IsReady()
+            and Chronicle.Theme:IsReady() and Chronicle.Popup:IsReady())
+    check("R5c. el Codex abre y cierra sin errores y todo está bloqueado",
+        pcall(Chronicle.Codex.Show, Chronicle.Codex) and Chronicle.Codex:IsVisible() and allLocked(ui)
+            and (function() Chronicle.Codex:Hide(); return not Chronicle.Codex:IsVisible() end)())
+end
+CreateFrame = realCreateFrame
 
 -- ===================== Aislamiento =====================
 local function codeOf(name)

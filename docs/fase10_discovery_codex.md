@@ -100,7 +100,7 @@ Nuevos: `tests/codex_discovery_tests.lua` y este documento.
 ## Verificación
 
 `npm test` desde `tests`: **1241 superadas, 0 fallidas, código de salida 0** (1168 de las fases 1 a 9 y 73 nuevas de
-`tests/codex_discovery_tests.lua`).
+`tests/codex_discovery_tests.lua`); tras la corrección posterior, **1270** (ver más abajo).
 
 Qué cubren las pruebas nuevas, en dos niveles que no hay que confundir:
 
@@ -135,6 +135,51 @@ breadcrumb bloqueado, un aviso sin ID válido que provoca un repintado, y no com
 con una excepción posterior en el script de pruebas. Se añadieron las pruebas `9b2`, `14c` y `22`, y guardas en el script para que los
 fallos salgan como aserciones, y se **repitió la batería completa desde un estado limpio**: 39 de 39. No se interrumpió ninguna
 ejecución en esta fase.
+
+## Corrección posterior: suscripción a Discovery a prueba de fallos
+
+**Defecto** (encontrado en la revisión de la Fase 10, commit `3def28d`): en `Codex.lua`, `Subscribe()` se llama al final de `Init()`,
+con la ventana ya construida y `frame`, `views`, `model` y `ready = true` ya asignados. Obtenía la dependencia con `Dep("discovery")` y
+preguntaba `discovery:IsReady()` **sin protección**. Si cualquiera de las dos lanzaba un error, la excepción salía de `Init()` con el
+Codex ya construido y marcado como listo: un estado incoherente para quien lo inicializa y un incumplimiento del carácter opcional
+de Discovery. (Reproducido: con el código anterior, las pruebas de regresión fallan por aserción y la excepción `IsReady roto` escapa
+de `Init`.)
+
+**Solución mínima:**
+- La pregunta «¿hay un Discovery utilizable?» pasa al modelo como `CodexModel:IsDiscoveryReady()`, que ya protegía y deduplicaba los
+  errores de Discovery. Obtener el servicio o llamar a `IsReady()` y fallar significa **«no disponible»**: devuelve `false`, comunica el
+  error **una sola vez** por mensaje y nunca lo propaga. `IsDiscovered` usa la misma función, de modo que sin confirmación de que el
+  servicio está listo **no se consulta ninguna entrada como descubierta** (todo queda bloqueado, como antes).
+- `Subscribe()` empieza por `model:IsDiscoveryReady()` y obtiene el bus y Discovery (para el nombre del evento) con `pcall`. No puede
+  lanzar errores. Si algo no está disponible, **no se registra nada** y cada apertura repinta por completo (comportamiento ya
+  existente sin suscripción).
+- **Valor de `Events:Register`** (contrato real: `true` si añadió el manejador, `false` solo si esa misma función ya estaba registrada;
+  los argumentos inválidos lanzan error): solo un `true` cuenta como suscripción activa. Un `false` no se interpreta como suscripción;
+  un error se comunica y tampoco la activa. En ambos casos el Codex se inicializa y se repinta al abrir.
+- Sin cambios en `Discovery`, `Events`, `State`, `Registry`, `Localization`, `Core/Init.lua`, el `.toc`, el contrato de visibilidad
+  de lo bloqueado ni el manejo de errores de la construcción de la ventana (un fallo real al construirla sigue haciendo fallar `Init`).
+
+**Pruebas de regresión** (`tests/codex_discovery_tests.lua`, bloques `R1` a `R7`), que comprueban el estado real del Codex, su
+visibilidad, los registros del bus y el contenido presentado, no solo que `Init` no lance:
+- obtener Discovery lanza un error → Codex inicializado, oculto, con una ventana; el bus no recibe **ninguna** llamada; todo `???` sin
+  datos reales en ningún widget; abrir, cerrar, expandir y seleccionar no lanzan; el error se comunica **una vez**;
+- `IsReady` lanza un error → Codex inicializado, **ninguna consulta** de entradas como descubiertas, ningún manejador, todo bloqueado,
+  error comunicado una vez; al recuperarse el servicio, la siguiente apertura repinta con el estado consultable; un aviso del bus no
+  hace nada porque nadie lo recibe;
+- Discovery inestable (falla en llamadas alternas, las dos paridades), obtener el bus que falla, evento sin nombre o con nombre no
+  válido, `Register` que devuelve `false` y `Register` que lanza error;
+- comportamiento normal sin cambios: una única suscripción, sin duplicados tras abrir y cerrar y repetir `Init`; repintado con la
+  ventana visible; sin trabajo con la ventana oculta; sin errores comunicados;
+- a nivel del addon completo, con `Discovery:IsReady` roto en el arranque: el Codex se inicializa (no falla ni se omite), no hay
+  registros, y Registry, Localization, Resolver, Theme y Popup arrancan.
+
+**Resultados reales:** `npm test` desde `tests`: **1270 superadas, 0 fallidas, código de salida 0** (1241 + 29 nuevas). Mutaciones:
+**12 nuevas de esta corrección, las 12 detectadas por aserciones claras**, y **se repitió la batería de 39 de la Fase 10, también 39
+de 39**, ambas sin excepciones posteriores, con los ficheros restaurados y verificados idénticos al terminar. Historial: la primera pasada
+de las 12 dio 10 de 12 (obtener Discovery dentro de `Subscribe` solo falla con un servicio inestable, y un evento sin nombre); se
+añadieron las pruebas `R6`, `R7` y `R7c`, se protegió el bloque de `IsReady` roto para que un fallo salga como aserción, y se repitió. En
+la repetición de las 39 abortaron dos veces las anclas de dos mutaciones (D5, D10 y C7) por el refactor: se actualizaron antes de
+escribir nada (sin residuos) y se repitió entera desde un estado limpio.
 
 ## Cambios en pruebas anteriores
 
