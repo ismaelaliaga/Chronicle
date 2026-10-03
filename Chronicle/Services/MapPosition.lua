@@ -35,7 +35,7 @@ Chronicle = Chronicle or {}
 --   "unknown"      no se puede saber con este cliente o este dato: falta una API, falló, o devolvió algo
 --                  que no es creíble (no es un número, no es finito, está fuera de rango). Reintentar no
 --                  tiene por qué arreglarlo. El segundo valor es el motivo.
---   Motivos de "unavailable": "no_map", "no_position", "incomplete", "no_data", "empty".
+--   Motivos de "unavailable": "no_map", "no_position", "incomplete", "empty".
 --   Motivos de "unknown":     "api_missing", "api_error", "invalid_map", "invalid_coordinates",
 --                             "invalid_value".
 --
@@ -43,8 +43,13 @@ Chronicle = Chronicle or {}
 --     * mapID: entero positivo. x e y: números finitos en [0, 1], coordenadas NORMALIZADAS del mapa
 --       (0 = borde izquierdo/superior, 1 = borde derecho/inferior). Son comparables SOLO entre
 --       posiciones del mismo mapID; este servicio nunca convierte entre mapas.
---     * (0, 0) exacto es el valor con que el cliente indica "no hay dato", NO una posición: se devuelve
---       "unavailable", "no_data". Nunca se devuelve (0, 0) como posición válida.
+--     * (0, 0) NO es un caso especial: si la API entrega dos números finitos en [0, 1], son una posición
+--       válida aunque sean ambos 0 (la esquina del mapa). No se ha encontrado evidencia fiable y específica
+--       de Classic Era de que el cliente use (0, 0) para decir "sin dato": la documentación pública de
+--       C_Map.GetPlayerMapPosition dice que devuelve nil en áreas restringidas y no menciona ceros. La
+--       ausencia de dato llega como nil (ver "unavailable"), nunca se rellena con coordenadas inventadas.
+--       Esto está SIN verificar en un cliente real: si allí se viera que (0, 0) significa "sin dato", habría
+--       que revisar esta decisión (ver docs/fase6_mapposition_proximity.md).
 --   GetZoneName()    -> "available", nombre   | "unavailable", "empty" (nil, "" o solo espacios)
 --   GetSubzoneName() -> "available", nombre   | "unavailable", "empty" (aquí "" es lo normal fuera de
 --                       una subzona, y no se distingue de "aún no cargado": en ambos casos no hay nada
@@ -126,9 +131,6 @@ local function NewMapPosition(apiSource)
         end
         if not InUnitRange(x) or not InUnitRange(y) then
             return "unknown", "invalid_coordinates"
-        end
-        if x == 0 and y == 0 then
-            return "unavailable", "no_data"
         end
         return "available", { mapID = mapId, x = x, y = y }
     end

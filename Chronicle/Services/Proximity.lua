@@ -79,7 +79,7 @@ local function InvalidReason(target)
     if not IsMapId(target.mapID) then
         return "invalid_map"
     end
-    if not InUnitRange(target.x) or not InUnitRange(target.y) or (target.x == 0 and target.y == 0) then
+    if not InUnitRange(target.x) or not InUnitRange(target.y) then
         return "invalid_coordinates"
     end
     if not IsFiniteNumber(target.radius) or target.radius <= 0 or target.radius > 1 then

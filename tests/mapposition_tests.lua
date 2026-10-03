@@ -1,5 +1,5 @@
 -- Escenarios de prueba de MapPosition (Fase 6). El servicio recibe las APIs del cliente como una
--- dependencia inyectable (MapPosition.New(api)), así que aquí se simula CUALQUIER respuesta del
+-- dependencia inyectable (NewWith(api)), así que aquí se simula CUALQUIER respuesta del
 -- cliente. Esto prueba la lógica de validación, NO que las APIs reales funcionen en Classic Era.
 
 LoadAddon()
@@ -47,7 +47,19 @@ local function Api(over)
     }
     return api
 end
-local function New(over) return MapPosition.New(Api(over)) end
+-- Los métodos del servicio bajo prueba se llaman envueltos en pcall: si lanzaran una excepción, el resultado es
+-- "THROWS" y salta una aserción clara en vez de interrumpir todo el arnés.
+local function Guarded(service)
+    return setmetatable({}, { __index = function(_, name)
+        return function(_, ...)
+            local ok, a, b = pcall(service[name], service, ...)
+            if ok then return a, b end
+            return "THROWS", a
+        end
+    end })
+end
+local function NewWith(api) return Guarded(MapPosition.New(api)) end
+local function New(over) return NewWith(Api(over)) end
 -- Una llamada que lanzara un error se convierte en un resultado "THROWS", para que una regresión salga como FAIL
 -- limpio y no como excepción que interrumpe el arnés.
 local function try(fn)
@@ -87,8 +99,61 @@ local function expect(over, wantStatus, wantReason)
     local s, r = pos(over)
     return s == wantStatus and r == wantReason, tostring(s) .. "/" .. tostring(r)
 end
-check("(0, 0) exacto NO es una posición: es 'unavailable', 'no_data' (nunca se devuelve como válida)",
-    expect({ x = 0, y = 0 }, "unavailable", "no_data"))
+-- (0, 0) NO es un valor especial: no hay evidencia fiable y específica de Classic Era de que el cliente lo use para
+-- decir "sin dato" (la documentación pública habla de nil en áreas restringidas). Dos números válidos son una posición.
+do
+    local s0, v0 = pos({ x = 0, y = 0 })
+    check("1. dos coordenadas válidas (0, 0) son una posición válida: 'available' con { mapID, x = 0, y = 0 }",
+        s0 == "available" and type(v0) == "table" and v0.mapID == 1000 and v0.x == 0 and v0.y == 0)
+    check("1b. la posición (0, 0) tiene exactamente mapID, x e y (nada inventado) y los ceros son números",
+        type(v0) == "table" and (function() local n = 0 for _ in pairs(v0) do n = n + 1 end return n == 3 and type(v0.x) == "number" and type(v0.y) == "number" end)())
+    local sn, vn = pos({ x = -0.0, y = 0 })
+    check("1c. el cero negativo (-0) también es una coordenada válida", sn == "available" and type(vn) == "table" and vn.x == 0 and vn.y == 0)
+    check("1d. (0, 0) ya no tiene motivo propio: ni 'no_data' ni 'unavailable'",
+        select(1, pos({ x = 0, y = 0 })) ~= "unavailable" and select(2, pos({ x = 0, y = 0 })) ~= "no_data")
+    check("1e. una esquina cualquiera es válida: (0,0), (1,1), (0,1), (1,0)",
+        select(1, pos({ x = 0, y = 0 })) == "available" and select(1, pos({ x = 1, y = 1 })) == "available"
+            and select(1, pos({ x = 0, y = 1 })) == "available" and select(1, pos({ x = 1, y = 0 })) == "available")
+    check("1f. un cero solo vale si el OTRO valor también es válido: (0, 1.5) y (-1, 0) siguen siendo inválidos",
+        expect({ x = 0, y = 1.5 }, "unknown", "invalid_coordinates") and expect({ x = -1, y = 0 }, "unknown", "invalid_coordinates"))
+    check("2. un valor ausente NO se convierte en cero: (0, nil) y (nil, 0) son 'incomplete', y 'nil, nil' también",
+        expect({ x = 0, y = "NIL" }, "unavailable", "incomplete") and expect({ x = "NIL", y = 0 }, "unavailable", "incomplete")
+            and expect({ x = "NIL", y = "NIL" }, "unavailable", "incomplete"))
+    check("2b. un cero escrito como cadena o como booleano NO se acepta como número: '0' -> invalid_coordinates",
+        expect({ x = "0", y = 0 }, "unknown", "invalid_coordinates") and expect({ x = 0, y = "0" }, "unknown", "invalid_coordinates")
+            and expect({ x = true, y = 0 }, "unknown", "invalid_coordinates"))
+    check("2c. NaN e infinitos siguen rechazándose junto a un cero",
+        expect({ x = 0, y = 0 / 0 }, "unknown", "invalid_coordinates") and expect({ x = 1 / 0, y = 0 }, "unknown", "invalid_coordinates")
+            and expect({ x = 0, y = -1 / 0 }, "unknown", "invalid_coordinates"))
+end
+-- Ningún fallo produce una posición: el segundo valor es siempre un motivo (cadena), nunca una tabla ficticia.
+do
+    local scenarios = {
+        { "sin C_Map", function() return NewWith({}) end }, { "api nil", function() return NewWith(nil) end },
+        { "GetBestMapForUnit lanza error", function() return New({ mapError = true }) end },
+        { "GetPlayerMapPosition lanza error", function() return New({ posError = true }) end },
+        { "GetXY lanza error", function() return New({ xyError = true }) end },
+        { "mapID nil", function() return New({ mapId = "NIL" }) end }, { "mapID inválido", function() return New({ mapId = "x" }) end },
+        { "posición nil", function() return New({ position = "NIL" }) end }, { "posición sin GetXY", function() return New({ position = {} }) end },
+        { "x nil", function() return New({ x = "NIL" }) end }, { "y nil", function() return New({ y = "NIL" }) end },
+        { "x NaN", function() return New({ x = 0 / 0 }) end }, { "y infinita", function() return New({ y = 1 / 0 }) end },
+        { "x fuera de rango", function() return New({ x = 2 }) end }, { "y negativa", function() return New({ y = -1 }) end },
+        { "x cadena", function() return New({ x = "0.5" }) end },
+    }
+    local bad
+    for _, scenario in ipairs(scenarios) do
+        local st, value = try(function() return scenario[2]():GetPosition() end)
+        if st == "available" or st == "THROWS" or type(value) ~= "string" then bad = scenario[1] break end
+    end
+    check("3. una API inexistente, que lanza error, o con datos ausentes/inválidos NUNCA genera una posición: estado distinto de 'available' y el valor es un motivo",
+        bad == nil, tostring(bad))
+    check("3b. sin API de mapas el estado es 'unknown' ('api_missing') y no hay coordenadas",
+        select(1, try(function() return NewWith({}):GetPosition() end)) == "unknown"
+            and select(2, try(function() return NewWith({}):GetPosition() end)) == "api_missing")
+    check("3c. si una API lanza un error el estado es 'unknown' ('api_error') y el error no se propaga",
+        select(1, pos({ mapError = true })) == "unknown" and select(2, pos({ mapError = true })) == "api_error"
+            and select(2, pos({ posError = true })) == "api_error" and select(2, pos({ xyError = true })) == "api_error")
+end
 check("fuera de rango (x o y mayores que 1, menores que 0) -> 'unknown', 'invalid_coordinates'",
     expect({ x = 1.0000001 }, "unknown", "invalid_coordinates") and expect({ y = 1.5 }, "unknown", "invalid_coordinates")
         and expect({ x = -0.0000001 }, "unknown", "invalid_coordinates") and expect({ y = -3 }, "unknown", "invalid_coordinates")
@@ -126,20 +191,20 @@ check("una API que lanza error -> 'unknown', 'api_error' (el error no se propaga
 check("sin API de mapas (api vacía, nil, función que devuelve nil, o valor que no es tabla) -> 'unknown', 'api_missing'",
     (function()
         for _, source in ipairs({ {}, function() return nil end, function() return {} end, function() return 5 end }) do
-            local s, r = MapPosition.New(source):GetPosition()
+            local s, r = NewWith(source):GetPosition()
             if s ~= "unknown" or r ~= "api_missing" then return false end
         end
-        local s, r = MapPosition.New(nil):GetPosition()
+        local s, r = NewWith(nil):GetPosition()
         return s == "unknown" and r == "api_missing"
     end)())
 check("C_Map incompleta (falta una de las dos funciones, o no es tabla) -> 'unknown', 'api_missing', sin llamar a lo que falta",
     (function()
         local a = Api(); a.C_Map.GetPlayerMapPosition = nil
-        local s1, r1 = MapPosition.New(a):GetPosition()
+        local s1, r1 = NewWith(a):GetPosition()
         local b = Api(); b.C_Map.GetBestMapForUnit = nil
-        local s2, r2 = MapPosition.New(b):GetPosition()
+        local s2, r2 = NewWith(b):GetPosition()
         local c = Api(); c.C_Map = "no soy una tabla"
-        local s3, r3 = MapPosition.New(c):GetPosition()
+        local s3, r3 = NewWith(c):GetPosition()
         return s1 == "unknown" and r1 == "api_missing" and s2 == "unknown" and r2 == "api_missing"
             and s3 == "unknown" and r3 == "api_missing"
     end)())
@@ -176,8 +241,8 @@ check("una API de nombres que lanza error -> 'unknown', 'api_error'",
     select(2, try(function() return New({ zoneError = true }):GetZoneName() end)) == "api_error"
         and select(2, try(function() return New({ subzoneError = true }):GetSubzoneName() end)) == "api_error")
 check("sin las funciones de nombres -> 'unknown', 'api_missing'",
-    select(2, MapPosition.New({}):GetZoneName()) == "api_missing" and select(2, MapPosition.New({}):GetSubzoneName()) == "api_missing"
-        and select(2, MapPosition.New(nil):GetZoneName()) == "api_missing")
+    select(2, NewWith({}):GetZoneName()) == "api_missing" and select(2, NewWith({}):GetSubzoneName()) == "api_missing"
+        and select(2, NewWith(nil):GetZoneName()) == "api_missing")
 
 -- ===================== Zona, subzona y mapa son conceptos independientes =====================
 check("la zona, la subzona y la posición se consultan por separado y no se deducen unas de otras",

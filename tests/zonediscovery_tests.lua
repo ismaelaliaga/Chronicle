@@ -65,7 +65,19 @@ local function Service(mp, opts)
         createFrame = opts.createFrame or factory,
     })
     if opts.init ~= false then svc:Init() end
-    return svc, made
+    -- Check envuelto: si el código bajo prueba lanzara una excepción, se convierte en { status = "THROWS" } para que salte
+    -- una aserción clara en vez de interrumpir todo el arnés. El resto de métodos (Init, IsReady) pasan tal cual.
+    local guarded = setmetatable({}, { __index = function(_, name)
+        return function(_, ...)
+            if name == "Check" then
+                local ok, result = pcall(svc.Check, svc)
+                if ok then return result end
+                return { status = "THROWS", reason = tostring(result), zone = { status = "THROWS" }, subzone = { status = "THROWS" } }
+            end
+            return svc[name](svc, ...)
+        end
+    end })
+    return guarded, made
 end
 
 -- ===================== Arranque completo =====================

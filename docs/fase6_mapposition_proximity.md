@@ -51,12 +51,13 @@ MP:GetSubzoneName()  --> "available", "Kharanos"      | "unavailable", "empty" |
 | Estado | Significa | Motivos |
 |---|---|---|
 | `available` | dato fiable | — |
-| `unavailable` | el cliente no lo tiene **ahora** (tras cargar, en instancias…): reintentar tiene sentido | `no_map`, `no_position`, `incomplete`, `no_data`, `empty` |
+| `unavailable` | el cliente no lo tiene **ahora** (tras cargar, en instancias…): reintentar tiene sentido | `no_map`, `no_position`, `incomplete`, `empty` |
 | `unknown` | no se puede saber o no es creíble: falta una API, falló, o devolvió algo imposible | `api_missing`, `api_error`, `invalid_map`, `invalid_coordinates`, `invalid_value` |
 
 - `mapID`: entero positivo. `x`, `y`: números **finitos** en **[0, 1]**: coordenadas normalizadas de ese mapa.
-- **`(0, 0)` exacto se trata como «sin datos»** (`unavailable`/`no_data`), nunca como posición. Una posición con
-  `x = 0` o `y = 0` pero no ambas es válida (borde del mapa).
+- **`(0, 0)` es una posición válida** si la API entrega dos números finitos en [0, 1]: la esquina del mapa. No es un
+  valor especial (ver «Tratamiento de `(0, 0)`» más abajo). Lo que **no** es una posición, y nunca se convierte en
+  una, es un valor ausente (`nil`), de tipo incorrecto (incluida la cadena `"0"`), `NaN`, infinito o fuera de rango.
 - No convierte coordenadas entre mapas ni compara posiciones. No crea frames ni temporizadores y no tiene `Init`.
 - La posición devuelta es una tabla nueva en cada llamada.
 
@@ -144,6 +145,44 @@ de forma independiente. No usa coordenadas, mapas ni distancias, y no escribe en
 llama a `Check()`. No usa temporizadores. Un error dentro de `Check` o al registrar un evento se comunica por
 `geterrorhandler` y no se propaga. Es lo único que hace falta para que funcione solo.
 
+## Tratamiento de `(0, 0)` (corregido tras la revisión)
+
+**Qué decía la primera entrega:** que `(0, 0)` era «el valor con que el cliente indica "no hay dato"» y que nunca podía
+ser una posición válida, tanto en `MapPosition` (se devolvía `unavailable`/`no_data`) como en la validación de los
+objetivos de `Proximity`. **Eso era una suposición sin evidencia.**
+
+**De dónde venía:** el `MapPosition.lua` del addon original descartaba `(x == 0 and y == 0)`, **sin ningún comentario que
+lo justificara**. La primera entrega lo heredó y lo presentó como un hecho del cliente.
+
+**Qué evidencia se encontró (consultada de nuevo para esta corrección):**
+
+- La documentación pública de `C_Map.GetPlayerMapPosition` (Warcraft Wiki) dice que **devuelve `nil`** dentro de áreas
+  restringidas (instancia, campo de batalla, arena), y su firma indica que el resultado puede ser `nil`. **No menciona
+  `(0, 0)` ni ceros** como indicador de ausencia en ninguna parte.
+- No se encontró ninguna fuente de Classic Era que describa `(0, 0)` como valor especial. Es posible que el descarte
+  del original fuera un reflejo del comportamiento de una API anterior, pero eso **tampoco está documentado** en lo
+  consultado y no es evidencia sobre `C_Map` en Classic Era.
+
+**Qué se hace ahora:** sin evidencia, no se rechazan unas coordenadas solo porque sean ambas cero.
+
+| Caso | Resultado |
+|---|---|
+| La API devuelve dos números finitos en [0, 1], incluso `(0, 0)` o `(-0, 0)` | `available`, con esa posición |
+| Un valor ausente (`nil`), aunque el otro sea 0 | `unavailable`, `incomplete` (nunca se rellena con 0) |
+| Una coordenada de tipo incorrecto (cadena `"0"`, booleano…), `NaN`, infinito o fuera de [0, 1] | `unknown`, `invalid_coordinates` |
+| API inexistente / que lanza error / mapID ausente o inválido / posición `nil` | `unknown` o `unavailable` con su motivo; **nunca** una posición inventada |
+| Objetivo de `Proximity` en `(0, 0)` con `verified = true`, `mapID` y radio válidos | se acepta y se evalúa |
+| Jugador en `(0, 0)` y objetivo del mismo `mapID` dentro del radio | se descubre con `Discovery:Discover` |
+| Jugador y objetivo en `(0, 0)` pero con distinto `mapID` | no se comparan (`otherMap`) |
+
+El motivo `no_data` ya no existe. El resto de validaciones (mapa compatible, radio, `verified`, datos inválidos,
+idempotencia, resultados de Discovery, estar exactamente en el radio) no cambia.
+
+**Lo que sigue sin verificarse:** nada de esto se ha comprobado en un cliente real. **Si en el juego se observara que
+la API devuelve `(0, 0)` cuando de verdad no tiene dato, habría que volver a esta decisión** (por ejemplo, no
+aceptar `(0, 0)` como posición del jugador). El riesgo práctico es bajo hoy, porque no hay objetivos espaciales: un
+`(0, 0)` falso no puede activar nada.
+
 ## Qué se puede descubrir ya y qué queda pendiente
 
 | Tipo | ¿Se activa ya? | Cómo |
@@ -198,8 +237,8 @@ cd tests
 npm test
 ```
 
-Resultado de la ejecución final: **767 superadas, 0 fallidas, código de salida 0** (561 de las fases 1 a 5 y
-206 nuevas: 35 de MapPosition en `mapposition_tests.lua`, 95 de Proximity en `proximity_tests.lua` y
+Resultado de la ejecución final: **811 superadas, 0 fallidas, código de salida 0** (561 de las fases 1 a 5 y
+250 de la Fase 6: 46 de MapPosition en `mapposition_tests.lua`, 128 de Proximity en `proximity_tests.lua` y
 76 de ZoneDiscovery en `zonediscovery_tests.lua`).
 
 ### Cómo se inyectan las dependencias
@@ -217,7 +256,7 @@ Resultado de la ejecución final: **767 superadas, 0 fallidas, código de salida
 ### Cobertura de lo pedido
 
 Dependencias ausentes o no listas; posición desconocida, nil, incompleta e inválida; coordenadas dentro y fuera
-de rango (incluidos los límites 0 y 1 y `(0, 0)`); mapas incompatibles; distancia exactamente igual al radio,
+de rango (incluidos los límites 0 y 1, y `(0, 0)` como posición válida del jugador y de un objetivo); mapas incompatibles; distancia exactamente igual al radio,
 dentro y fuera; radios negativos, nulos, no numéricos, infinitos y mayores que 1; objetivos desconocidos o mal
 configurados; descubrimiento nuevo guardado; objetivo ya descubierto sin nuevo descubrimiento; fallos de
 persistencia y solo lectura; zona/subzona correcta, ambigua, vacía, desconocida y de tipo equivocado; APIs que no
@@ -227,28 +266,33 @@ anteriores.
 
 ### Mutaciones probadas (restauradas después)
 
-Se introdujo cada defecto de forma aislada y se comprobó que `npm test` fallaba; tras cada una se restauró el
-fichero y al final se verificó que todos quedaron idénticos a la versión correcta. **31 mutaciones, las 31 detectadas.**
+**Criterio estricto:** una mutación solo cuenta como detectada si produce al menos una aserción `[FAIL]` clara. Un
+fallo del intérprete por una excepción de Lua no controlada **no** cuenta. Tras cada mutación se restauró el fichero y
+al final se verificó que todos quedaron idénticos a la versión correcta. **40 mutaciones, todas detectadas con
+aserciones claras.**
 
-- **MapPosition (7):** devolver `(0, 0)` como válida; no validar el rango; no comprobar que el mapID sea finito;
-  llamar a las APIs sin `pcall`; aceptar un mapID que no es un entero positivo; tratar un nombre vacío como
-  disponible; no detectar un resultado incompleto.
-- **Proximity (12):** `<` en vez de `<=` (el radio exacto); comparar mapas distintos; aceptar radios nulos o
-  negativos; ignorar `verified`; contar un rechazo de Discovery como descubrimiento; no saltar lo ya descubierto;
-  evaluar sin estar inicializado; distancia Manhattan; añadir un temporizador; no validar las coordenadas del
-  objetivo; ignorar en silencio un proveedor que falla; contar `already` como descubrimiento nuevo.
+- **Específicas de `(0, 0)` (10):** `MapPosition` que vuelve a rechazar `(0, 0)` (el defecto original); que rechaza si
+  *cualquiera* de las dos coordenadas es 0; que convierte coordenadas ausentes en 0; que inventa una posición `(0, 0)`
+  si falta la API; que la inventa si la API lanza error; que acepta `"0"` (cadena) como coordenada; `Proximity` que
+  vuelve a rechazar objetivos en `(0, 0)`; que rechaza objetivos con cualquier coordenada a 0; que no evalúa si el
+  jugador está en `(0, 0)`; que no valida las coordenadas del objetivo.
+- **MapPosition (6):** no validar el rango; no comprobar que el mapID sea finito; llamar a las APIs sin `pcall`; aceptar
+  un mapID que no es un entero positivo; tratar un nombre vacío como disponible; no detectar un resultado incompleto.
+- **Proximity (12):** `<` en vez de `<=` (el radio exacto); comparar mapas distintos; aceptar radios nulos o negativos;
+  ignorar `verified`; contar un rechazo de Discovery como descubrimiento; no saltar lo ya descubierto; evaluar sin
+  estar inicializado; distancia Manhattan; añadir un temporizador; ignorar en silencio un proveedor que falla; contar
+  `already` como descubrimiento nuevo; tratar un objetivo de otro mapa como comparable.
 - **ZoneDiscovery (8):** resolver sin filtrar por tipo; elegir el primer candidato si es ambiguo; dar un rechazo de
-  Discovery por descubrimiento; no registrar los eventos; no aislar los errores del manejador; no tratar las
-  ciudades como zona; usar la posición; no comprobar el Resolver en `Init`.
-- **Core/Init (4):** Proximity sin `requires`; ZoneDiscovery sin depender del Resolver; Proximity o ZoneDiscovery
-  como módulos no requeridos.
+  Discovery por descubrimiento; no registrar los eventos; no aislar los errores del manejador; no tratar las ciudades
+  como zona; usar la posición; no comprobar el Resolver en `Init`.
+- **Core/Init (4):** Proximity sin `requires`; ZoneDiscovery sin depender del Resolver; Proximity o ZoneDiscovery como
+  módulos no requeridos.
 
-**Qué pasó con cuatro de ellas (transparencia):** en una primera pasada cuatro se marcaron como «no detectadas».
-Tres (MapPosition sin `pcall`, Proximity que cuenta un rechazo como descubrimiento y ZoneDiscovery sin dependencia
-del Resolver) sí hacían fallar el arnés, pero con una excepción de Lua dentro de una prueba y no con una aserción
-limpia; se endurecieron las pruebas para que fallen con un `[FAIL]` claro. La cuarta (Proximity que cuenta `already`
-como descubrimiento nuevo) **no estaba cubierta de verdad**: se añadieron las pruebas que faltaban. Las cuatro se
-volvieron a ejecutar y se detectan.
+**Historial (transparencia):** en la entrega anterior, cuatro mutaciones se habían marcado como «no detectadas» y
+tres de ellas se detectaban solo por una excepción de Lua. Ahora, además de exigir la aserción clara, las pruebas
+envuelven las llamadas al código bajo prueba (`pcall`) para que una excepción no interrumpa las pruebas siguientes: en
+la revisión del tratamiento de `(0, 0)` se comprobó que varias mutaciones dejaban un `[FAIL]` claro **y además** una
+excepción posterior, y se corrigió; la versión final de las pruebas no deja excepciones tras ninguna mutación.
 
 ### Cambio en una prueba anterior
 
@@ -266,6 +310,9 @@ que se omita en ese caso, así que la aserción se acotó a lo que la prueba dec
 - Los datos espaciales no existen, así que el motor de proximidad **no se ha podido probar con datos reales**.
 
 ## Decisiones que conviene revisar antes de la Fase 7
+
+0. **`(0, 0)` se acepta como posición válida** por falta de evidencia en contra (sección anterior). Hay que comprobarlo
+   en un cliente real de Classic Era antes de fiarse de las posiciones del jugador.
 
 1. **Datos espaciales** (opciones A/B arriba) y el procedimiento para medirlos en el cliente.
 2. **Quién llama a `Proximity:Evaluate()`**: un temporizador con intervalo, otro disparador, o nada hasta que haya
