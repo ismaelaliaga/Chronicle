@@ -1,10 +1,12 @@
 Chronicle = Chronicle or {}
 
--- Codex: la ventana principal de consulta de lore. FASE 8: SOLO LA ESTRUCTURA VISUAL. Marco con el estilo de Chronicle,
--- encabezado (título y botón de cierre), una zona de navegación a la izquierda y una zona de contenido a la derecha,
--- separadas por una línea. Las dos zonas son contenedores VACÍOS con una etiqueta provisional: aquí no hay árbol de
--- navegación, ni páginas de lore, ni conexión con Discovery, ni comando /chronicle, ni botón de minimapa, ni opciones, ni
--- persistencia de posición o tamaño. Todo eso llegará en fases posteriores sobre estos contenedores.
+-- Codex: la ventana principal de consulta de lore. Marco con el estilo de Chronicle, encabezado (título y botón de cierre),
+-- una zona de navegación a la izquierda y una zona de contenido a la derecha, separadas por una línea.
+-- FASE 8: la ventana. FASE 9: la NAVEGACIÓN Y LAS PÁGINAS. La izquierda es un árbol de las entidades de Registry (con sus
+-- nombres de Localization) y la derecha la página de la entidad elegida, con breadcrumbs e historial Atrás/Adelante. Este
+-- fichero solo construye la ventana y CABLEA las piezas; la lógica está en UI/CodexModel.lua (sin frames) y las vistas en
+-- UI/CodexNavigation.lua, UI/CodexPage.lua y UI/CodexScroll.lua. Sigue sin haber integración con Discovery (todo se ve,
+-- descubierto o no), ni comando /chronicle, ni botón de minimapa, ni opciones, ni persistencia de posición, página o historial.
 --
 -- ESTILO: todo sale de Chronicle.Theme (colores, fuentes, medidas, textura, backdrop, capa). Este fichero no define
 -- ninguna constante visual propia; los únicos literales son las dos etiquetas provisionales, el nombre del frame y las
@@ -21,9 +23,10 @@ Chronicle = Chronicle or {}
 --   Show/Hide/Toggle son idempotentes: devuelven true si, al terminar, la ventana está en el estado pedido (mostrar algo ya
 --   visible, u ocultar algo ya oculto, es true). Motivos: "not_ready" (antes de un Init válido, o tras uno fallido; nunca
 --   crean la ventana por su cuenta ni lanzan error) y "ui_error" (la interfaz falló; se comunica por geterrorhandler).
---   Chronicle.Codex.New({ theme, createFrame, uiParent, specialFrames }) crea otra instancia (pruebas); cada dependencia
---   puede ser el objeto o una función que lo devuelve (createFrame es la propia función). La instancia por defecto es
---   Chronicle.Codex y usa los globales del cliente y Chronicle.Theme.
+--   La API pública NO cambia en la Fase 9: la navegación se hace con la propia interfaz (clics), no con métodos.
+--   Chronicle.Codex.New({ theme, registry, localization, createFrame, uiParent, specialFrames }) crea otra instancia
+--   (pruebas); cada dependencia puede ser el objeto o una función que lo devuelve (createFrame es la propia función). La
+--   instancia por defecto es Chronicle.Codex y usa los globales del cliente y Chronicle.Theme/Registry/Localization.
 --
 -- ARRASTRE: se mueve arrastrando con el botón izquierdo; SetClampedToScreen (si el cliente lo ofrece) evita sacarla de la
 -- pantalla. La posición NO se guarda: cada sesión empieza centrada. Escape la cierra (UISpecialFrames).
@@ -44,14 +47,15 @@ Chronicle = Chronicle or {}
 
 local FRAME_NAME = "ChronicleCodexFrame"
 
--- Etiquetas PROVISIONALES de las dos zonas (para que se entienda la distribución). Se retirarán cuando haya contenido real.
 local TEXT_TITLE = "Chronicle"
-local TEXT_NAV = "Navegación"
-local TEXT_CONTENT = "Contenido"
+
+-- Módulos internos que cablea el Codex (y que se comprueban antes de crear nada).
+local INTERNAL_MODULES = { "CodexModel", "CodexScroll", "CodexNavigation", "CodexPage" }
 
 -- Lo que este módulo da por existente en Theme. Init falla antes de crear nada si falta alguno.
 local REQUIRED_LAYOUT = { "CODEX_WIDTH", "CODEX_HEIGHT", "CODEX_INSET", "CODEX_HEADER_HEIGHT", "CODEX_NAV_WIDTH",
-    "CODEX_DIVIDER_THICKNESS", "POPUP_CLOSE_OFFSET" }
+    "CODEX_DIVIDER_THICKNESS", "CODEX_ROW_HEIGHT", "CODEX_ROW_INDENT", "CODEX_TOGGLE_WIDTH", "CODEX_TOOLBAR_HEIGHT",
+    "CODEX_BUTTON_WIDTH", "CODEX_SCROLLBAR_WIDTH", "CODEX_MIN_THUMB_HEIGHT", "CODEX_SCROLL_STEP", "POPUP_CLOSE_OFFSET" }
 
 local function IsObject(value)
     return type(value) == "table" or type(value) == "userdata"
@@ -68,7 +72,7 @@ end
 
 local function NewCodex(deps)
     if type(deps) ~= "table" then
-        error("Chronicle.Codex.New: se esperaba una tabla { theme, createFrame, uiParent, specialFrames }", 2)
+        error("Chronicle.Codex.New: se esperaba una tabla { theme, registry, localization, createFrame, uiParent, specialFrames }", 2)
     end
 
     local function Dep(name)
@@ -81,6 +85,7 @@ local function NewCodex(deps)
 
     -- Estado privado
     local frame -- la ventana; nil hasta que Init termina
+    local views -- { navigation, page }; nil hasta que Init termina
     local ready = false
     local initError = nil -- error definitivo de una construcción fallida
     local self = {}
@@ -128,7 +133,7 @@ local function NewCodex(deps)
 
     -- Crea la ventana. Lanza error si algo falla; no asigna estado (lo hace Init si todo va bien). `partial` recibe el
     -- frame en cuanto existe, para que Init pueda limpiarlo si la construcción no termina.
-    local function Build(theme, parent, createFrame, specialFrames, partial)
+    local function Build(theme, parent, createFrame, specialFrames, partial, model)
         local function layout(name) return theme:GetLayout(name) end
         local function spacing(name) return theme:GetSpacing(name) end
         local function must(what, ok, reason)
@@ -187,10 +192,10 @@ local function NewCodex(deps)
         local navSurface = Fill(nav, "BACKGROUND", "BG_PANEL")
         navSurface:SetPoint("TOPLEFT", nav, "TOPLEFT", 0, 0)
         navSurface:SetPoint("BOTTOMRIGHT", nav, "BOTTOMRIGHT", 0, 0)
-        local navLabel = nav:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-        navLabel:SetPoint("TOPLEFT", nav, "TOPLEFT", spacing("MD"), -spacing("MD"))
-        navLabel:SetText(TEXT_NAV)
-        must("Theme:ApplyText(SECONDARY)", theme:ApplyText(navLabel, "SECONDARY"))
+        local paneHeight = layout("CODEX_HEIGHT") - bodyTop - inset
+        local scroll = Chronicle.CodexScroll.New({ theme = theme, createFrame = createFrame })
+        local navigation = Chronicle.CodexNavigation.New({ theme = theme, createFrame = createFrame, scroll = scroll })
+        navigation:Attach(nav, navWidth, paneHeight, model)
 
         -- Separación entre ambas zonas.
         local separator = Fill(f, "ARTWORK", "DIVIDER")
@@ -202,10 +207,12 @@ local function NewCodex(deps)
         local content = createFrame("Frame", nil, f)
         content:SetPoint("TOPLEFT", f, "TOPLEFT", inset + navWidth + line, -bodyTop)
         content:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -inset, inset)
-        local contentLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-        contentLabel:SetPoint("TOPLEFT", content, "TOPLEFT", spacing("LG"), -spacing("MD"))
-        contentLabel:SetText(TEXT_CONTENT)
-        must("Theme:ApplyText(SECONDARY)", theme:ApplyText(contentLabel, "SECONDARY"))
+        local contentWidth = layout("CODEX_WIDTH") - 2 * inset - navWidth - line
+        content:SetSize(contentWidth, paneHeight)
+        local page = Chronicle.CodexPage.New({ theme = theme, createFrame = createFrame, scroll = scroll })
+        page:Attach(content, contentWidth, paneHeight, model)
+        navigation:Refresh()
+        page:Refresh()
 
         -- El botón de cierre estándar del cliente oculta su ventana padre por sí mismo.
         local close = createFrame("Button", nil, f, "UIPanelCloseButton")
@@ -223,7 +230,20 @@ local function NewCodex(deps)
         if not registered then
             table.insert(specialFrames, FRAME_NAME)
         end
-        return f
+        return f, { navigation = navigation, page = page }
+    end
+
+    -- Repinta las vistas tras un cambio del modelo. Un fallo de la interfaz se comunica, no se propaga al modelo.
+    local function RefreshViews()
+        if not views then
+            return
+        end
+        for _, name in ipairs({ "navigation", "page" }) do
+            local ok, err = pcall(views[name].Refresh, views[name])
+            if not ok then
+                ReportError("Chronicle.Codex: error al actualizar " .. name .. ": " .. tostring(err))
+            end
+        end
     end
 
     function self:Init()
@@ -246,6 +266,18 @@ local function NewCodex(deps)
         if theme:GetStrata("CODEX") == nil then
             error("Codex: a Theme le falta strata.CODEX", 0)
         end
+        local registry, localization = Dep("registry"), Dep("localization")
+        if not IsObject(registry) or type(registry.Has) ~= "function" then
+            error("Codex: Registry no está disponible", 0)
+        end
+        if not IsObject(localization) or type(localization.Get) ~= "function" then
+            error("Codex: Localization no está disponible", 0)
+        end
+        for _, name in ipairs(INTERNAL_MODULES) do
+            if type(Chronicle[name]) ~= "table" or type(Chronicle[name].New) ~= "function" then
+                error("Codex: falta el módulo interno " .. name, 0)
+            end
+        end
         local createFrame = deps.createFrame
         if type(createFrame) ~= "function" then
             error("Codex: CreateFrame no está disponible", 0)
@@ -260,7 +292,8 @@ local function NewCodex(deps)
         end
 
         local partial = {}
-        local ok, f = pcall(Build, theme, parent, createFrame, specialFrames, partial)
+        local model = Chronicle.CodexModel.New({ registry = registry, localization = localization, onChange = RefreshViews })
+        local ok, f, builtViews = pcall(Build, theme, parent, createFrame, specialFrames, partial, model)
         if not ok then
             -- El error original va primero y completo; si además la limpieza falla, se añade como nota.
             local message = "Codex: no se pudo crear la ventana: " .. tostring(f)
@@ -271,7 +304,7 @@ local function NewCodex(deps)
             initError = message
             error(initError, 0)
         end
-        frame = f
+        frame, views = f, builtViews
         ready = true
     end
 
@@ -326,6 +359,8 @@ end
 -- Instancia por defecto: usa los globales del cliente (a través de funciones, para leerlos al usarlos) y Chronicle.Theme.
 Chronicle.Codex = NewCodex({
     theme = function() return Chronicle.Theme end,
+    registry = function() return Chronicle.Registry end,
+    localization = function() return Chronicle.Localization end,
     createFrame = function(...) return CreateFrame(...) end,
     uiParent = function() return UIParent end,
     specialFrames = function() return UISpecialFrames end,

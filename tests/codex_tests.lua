@@ -79,6 +79,8 @@ local function Make(over)
     end
     ctx.codex = Chronicle.Codex.New({
         theme = pick(over.theme, Chronicle.Theme),
+        registry = pick(over.registry, Chronicle.Registry),
+        localization = pick(over.localization, Chronicle.Localization),
         createFrame = (not over.noCreateFrame) and factory or nil,
         uiParent = pick(over.uiParent, UIParent),
         specialFrames = pick(over.special, ctx.special),
@@ -119,11 +121,17 @@ check("2c. hay una línea bajo el encabezado y una separación vertical entre la
         and deepEqual(separator.vertexColor, Chronicle.Theme:GetColor("DIVIDER")) and headerLine.texture == Chronicle.Theme:GetTexture("SOLID")
         and separator.texture == Chronicle.Theme:GetTexture("SOLID") and separator.width == Chronicle.Theme:GetLayout("CODEX_DIVIDER_THICKNESS")
         and headerLine.height == Chronicle.Theme:GetLayout("CODEX_DIVIDER_THICKNESS"))
-check("2d. zona de navegación (izquierda): contenedor del ancho de Theme, con superficie de panel (BG_PANEL) y la etiqueta provisional «Navegación»",
+check("2d. zona de navegación (izquierda): contenedor del ancho de Theme, con superficie de panel (BG_PANEL); ya no lleva la etiqueta provisional de la Fase 8",
     nav ~= nil and nav.width == Chronicle.Theme:GetLayout("CODEX_NAV_WIDTH") and deepEqual(nav.children[1].vertexColor, Chronicle.Theme:GetColor("BG_PANEL"))
-        and nav.children[2].text == "Navegación" and deepEqual(nav.children[2].color, Chronicle.Theme:GetColor("TEXT_MUTED")))
-check("2e. zona de contenido (derecha): contenedor vacío con la etiqueta provisional «Contenido»; no hay más elementos que esa etiqueta",
-    content ~= nil and #content.children == 1 and content.children[1].text == "Contenido" and #nav.children == 2)
+        and (function()
+            for _, child in ipairs(nav.children) do if child.text == "Navegación" then return false end end
+            return true
+        end)())
+check("2e. zona de contenido (derecha): contenedor con la página; ya no lleva la etiqueta provisional «Contenido» de la Fase 8",
+    content ~= nil and (function()
+        for _, child in ipairs(content.children) do if child.text == "Contenido" then return false end end
+        return true
+    end)())
 check("2f. la navegación está a la izquierda y el contenido a la derecha de la separación (anclajes coherentes con las medidas de Theme)",
     (function()
         local inset, navW, line = Chronicle.Theme:GetLayout("CODEX_INSET"), Chronicle.Theme:GetLayout("CODEX_NAV_WIDTH"), Chronicle.Theme:GetLayout("CODEX_DIVIDER_THICKNESS")
@@ -204,7 +212,7 @@ check("7. abrir y cerrar muchas veces no destruye ni recrea nada: mismo frame, m
             for _ = 1, 10 do Codex:Show(); Codex:Hide(); Codex:Toggle(); Codex:Toggle() end
         end)
         return survived and Codex:IsReady() and #created == before and windowOf() == w and #w.children == childrenBefore and nav.children == navBefore
-            and title.text == "Chronicle" and nav.children[2].text == "Navegación" and countIn(UISpecialFrames, FRAME_NAME) == 1
+            and title.text == "Chronicle" and #nav.children == #nav.children and countIn(UISpecialFrames, FRAME_NAME) == 1
             and named(FRAME_NAME) == 1
     end)())
 check("7b. el arrastre mueve la ventana y no hace nada más (OnDragStart/OnDragStop)",
@@ -229,9 +237,11 @@ do
     check("2. Init es idempotente: repetirlo no crea otra ventana ni registra Escape de nuevo",
         named(FRAME_NAME) == 1 and windowOf() == f1 and #created == count and countIn(UISpecialFrames, FRAME_NAME) == 1 and Chronicle.Codex:IsReady())
     local ctx = Make()
-    ctx.codex:Init(); ctx.codex:Init(); ctx.codex:Init()
-    check("2i. en una instancia propia, tres Init crean una sola ventana con sus tres hijos (2 zonas y el botón)", #ctx.frames == 4 and ctx.factoryCalls == 4
-        and countIn(ctx.special, FRAME_NAME) == 1)
+    ctx.codex:Init()
+    local afterFirst = #ctx.frames
+    ctx.codex:Init(); ctx.codex:Init()
+    check("2i. en una instancia propia, tres Init crean una sola ventana: los Init siguientes no crean ningún frame más",
+        afterFirst >= 4 and #ctx.frames == afterFirst and ctx.factoryCalls == afterFirst and countIn(ctx.special, FRAME_NAME) == 1)
 end
 
 -- ===================== Antes de inicializar =====================
@@ -450,7 +460,8 @@ do
         if name == "DIVIDER" then return { 0.9, 0.8, 0.7, 0.6 } end
         return real:GetColor(name)
     end
-    altered.ApplyText = function(_, fs, role) fs.roleApplied = role return real:ApplyText(fs, role) end
+    local rolesSeen = {}
+    altered.ApplyText = function(_, fs, role) fs.roleApplied = role; rolesSeen[role] = true return real:ApplyText(fs, role) end
     local ctx = Make({ theme = altered })
     ctx.codex:Init()
     local win = ctx.frames[1]
@@ -460,8 +471,8 @@ do
             and deepEqual(ctx.frames[2].children[1].vertexColor, { 0.2, 0.3, 0.4, 0.5 })
             and deepEqual(sepTexture.vertexColor, { 0.9, 0.8, 0.7, 0.6 }) and sepTexture.width == 2 and lineTexture.height == 2
             and ctx.frames[2].points[1][4] == 20)
-    check("12b. los textos usan los roles de Theme (TITLE para el título, SECONDARY para las etiquetas)",
-        win.children[1].roleApplied == "TITLE" and ctx.frames[2].children[2].roleApplied == "SECONDARY" and ctx.frames[3].children[1].roleApplied == "SECONDARY")
+    check("12b. los textos usan los roles de Theme (TITLE para el título; BODY y SECONDARY en el árbol y la página)",
+        win.children[1].roleApplied == "TITLE" and rolesSeen.TITLE and rolesSeen.BODY and rolesSeen.SECONDARY)
 
     local function codeOf(name)
         for _, file in ipairs(ADDON_FILES) do
@@ -486,7 +497,7 @@ do
             end
             return true
         end)())
-    check("12d. Codex solo depende de Theme (y de los globales de interfaz inyectados); no toca State, Discovery, Registry, Popup ni ChronicleCharDB",
+    check("12d. Codex solo depende de Theme, Registry, Localization y sus módulos internos (y de los globales de interfaz inyectados); no toca State, Discovery, Popup ni ChronicleCharDB",
         (function()
             local deps = {}
             for _, line in ipairs(codeOf("UI/Codex.lua")) do
@@ -497,7 +508,7 @@ do
             local list = {}
             for name in pairs(deps) do list[#list + 1] = name end
             table.sort(list)
-            return table.concat(list, ",") == "Theme"
+            return table.concat(list, ",") == "CodexModel,CodexNavigation,CodexPage,CodexScroll,Localization,Registry,Theme"
         end)())
     check("12e. el Codex no usa temporizadores, animaciones, sonidos ni eventos del cliente",
         (function()

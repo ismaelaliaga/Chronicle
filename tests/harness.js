@@ -50,6 +50,7 @@ const TEST_FILES = [
     "theme_tests.lua",
     "popup_tests.lua",
     "codex_tests.lua",
+    "codex_nav_tests.lua",
 ];
 const testFileSources = TEST_FILES.map((name) => {
     const src = fs.readFileSync(path.join(__dirname, name), "utf8");

@@ -29,6 +29,10 @@ Services/Proximity.lua
 Services/ZoneDiscovery.lua
 UI/Theme.lua
 UI/Popup.lua
+UI/CodexModel.lua
+UI/CodexScroll.lua
+UI/CodexNavigation.lua
+UI/CodexPage.lua
 UI/Codex.lua
 Localization/esES/EasternKingdoms.lua
 Localization/esES/DunMorogh.lua

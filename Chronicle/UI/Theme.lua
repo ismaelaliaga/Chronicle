@@ -51,6 +51,7 @@ local DEFAULT_DEFINITIONS = {
         TEXT_IVORY = { 0.90, 0.86, 0.76, 1 }, -- texto principal
         TEXT_MUTED = { 0.58, 0.53, 0.46, 1 }, -- texto secundario
         SHADOW = { 0, 0, 0, 1 }, -- sombra de texto
+        SELECTION = { 0.80, 0.64, 0.30, 0.18 }, -- fila seleccionada de una lista (oro translúcido sobre el fondo)
     },
     -- Roles tipográficos: cada texto pide un rol en vez de fijar fuente/tamaño/color.
     fonts = {
@@ -83,6 +84,15 @@ local DEFAULT_DEFINITIONS = {
         CODEX_HEADER_HEIGHT = 40,
         CODEX_NAV_WIDTH = 240,
         CODEX_DIVIDER_THICKNESS = 1,
+        -- Navegación y páginas del Codex (Fase 9): filas del árbol, barra de herramientas y desplazamiento.
+        CODEX_ROW_HEIGHT = 22,
+        CODEX_ROW_INDENT = 14, -- sangría por nivel del árbol
+        CODEX_TOGGLE_WIDTH = 18, -- botón +/- para expandir o contraer
+        CODEX_TOOLBAR_HEIGHT = 28, -- historial y breadcrumbs sobre la página
+        CODEX_BUTTON_WIDTH = 24, -- botones Atrás / Adelante
+        CODEX_SCROLLBAR_WIDTH = 6,
+        CODEX_MIN_THUMB_HEIGHT = 20,
+        CODEX_SCROLL_STEP = 44, -- lo que avanza cada paso de la rueda del ratón
     },
     -- La ventana del Codex queda POR DEBAJO del popup (HIGH) para que un aviso nunca quede tapado por ella.
     strata = { POPUP = "HIGH", CODEX = "MEDIUM" },

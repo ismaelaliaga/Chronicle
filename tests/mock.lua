@@ -131,6 +131,13 @@ function FrameMethods:CreateTexture(name, layer)
     table.insert(self.children, tex)
     return tex
 end
+-- Zonas con desplazamiento (ScrollFrame): solo lo que usa Chronicle. Guardan el hijo y el desplazamiento tal cual; no recortan
+-- ni recalculan rangos (el cliente real sí): quien las usa calcula su propio máximo.
+function FrameMethods:SetScrollChild(child) self.scrollChild = child end
+function FrameMethods:GetScrollChild() return self.scrollChild end
+function FrameMethods:EnableMouseWheel(enabled) self.mouseWheel = enabled end
+function FrameMethods:SetVerticalScroll(offset) self.verticalScroll = offset end
+function FrameMethods:GetVerticalScroll() return self.verticalScroll or 0 end
 -- Botones: Click() ejecuta el OnClick del botón, como un clic del usuario.
 function FrameMethods:Click()
     local onClick = self.__scripts and self.__scripts.OnClick
@@ -138,6 +145,8 @@ function FrameMethods:Click()
 end
 
 function FontStringMethods:SetText(text) self.text = text or "" end
+-- Ancho simulado y determinista: 7 por carácter (no mide texto real).
+function FontStringMethods:GetStringWidth() return #(self.text or "") * 7 end
 function FontStringMethods:GetText() return self.text end
 function FontStringMethods:SetFont(path, size, flags)
     self.font = { path, size, flags }
