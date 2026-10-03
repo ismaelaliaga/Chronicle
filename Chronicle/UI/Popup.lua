@@ -45,7 +45,15 @@ Chronicle = Chronicle or {}
 --   (point, relativePoint, x, y).
 --
 -- CICLO DE VIDA: Init crea la ventana, oculta, una sola vez. Un Init fallido es definitivo en la sesión (repetirlo
--- devuelve el mismo error sin crear otra ventana), para no dejar ventanas huérfanas. Show/Enqueue/Close antes de Init
+-- devuelve el mismo error sin crear otra ventana), para no dejar ventanas huérfanas.
+--   Si la construcción falla a mitad: en el cliente un frame recién creado es VISIBLE, así que la ventana se oculta nada
+--   más crearla, ANTES de configurar nada; no se añade a UISpecialFrames hasta el último paso; y, al fallar, se intenta
+--   dejar el frame parcial limpio (sin scripts y oculto) con llamadas protegidas, sin que un error de la limpieza
+--   sustituya al error original (se le añade como nota). LIMITACIÓN: WoW no permite destruir un frame con nombre, así que
+--   el frame parcial seguirá existiendo (oculto, sin scripts y sin registrar en UISpecialFrames) hasta cerrar el juego, y
+--   el Popup no vuelve a intentar crearlo. Si hasta ocultarlo fallara (la propia llamada a Hide), no hay otro mecanismo
+--   verificado para esconderlo y la limpieza lo comunica en el error en vez de afirmar que lo logró.
+-- Show/Enqueue/Close antes de Init
 -- devuelven "not_ready" (nunca crean la ventana por su cuenta). El estado "visible" es siempre el del frame real.
 -- Si una llamada a la API de interfaz falla: se comunica por geterrorhandler, se devuelve "ui_error" y la ventana queda
 -- con el contenido que tenía (o cerrada), no a medias.
@@ -204,8 +212,34 @@ local function NewPopup(deps)
         end
     end
 
-    -- Crea la ventana. Lanza error si algo falla; no asigna nada del estado (lo hace Init si todo va bien).
-    local function Build(theme, parent, createFrame, specialFrames)
+    -- Deja un frame parcial lo más inofensivo posible: sin scripts (nada se ejecutará si luego se oculta o se arrastra) y
+    -- oculto. Cada paso va protegido y es independiente de los demás. Devuelve nil si todo fue bien, o un texto con lo que
+    -- falló. Nunca lanza error: no debe esconder el error original de la inicialización.
+    local function Cleanup(partial)
+        local f = partial.frame
+        if not IsObject(f) then
+            return nil
+        end
+        local failures = {}
+        local function try(what, fn, ...)
+            local ok, err = pcall(fn, ...)
+            if not ok then
+                failures[#failures + 1] = what .. ": " .. tostring(err)
+            end
+        end
+        for _, script in ipairs({ "OnHide", "OnDragStart", "OnDragStop" }) do
+            try("SetScript(" .. script .. ")", f.SetScript, f, script, nil)
+        end
+        try("Hide", f.Hide, f)
+        if #failures == 0 then
+            return nil
+        end
+        return table.concat(failures, "; ")
+    end
+
+    -- Crea la ventana. Lanza error si algo falla; no asigna nada del estado (lo hace Init si todo va bien). `partial`
+    -- recibe el frame en cuanto existe, para que Init pueda limpiarlo si la construcción no termina.
+    local function Build(theme, parent, createFrame, specialFrames, partial)
         local function layout(name) return theme:GetLayout(name) end
         local function must(what, ok, reason)
             if not ok then
@@ -217,6 +251,10 @@ local function NewPopup(deps)
         if not IsObject(f) then
             error("createFrame no devolvió un frame", 0)
         end
+        -- Un frame recién creado es VISIBLE en el cliente. Se guarda para poder limpiarlo y se oculta antes de configurar
+        -- nada: ninguna operación posterior, falle o no, puede dejar a la vista una ventana a medias.
+        partial.frame = f
+        f:Hide()
         f:SetSize(layout("POPUP_WIDTH"), layout("POPUP_MIN_HEIGHT"))
         f:SetPoint("TOP", parent, "TOP", 0, layout("POPUP_DEFAULT_OFFSET_Y"))
         f:SetFrameStrata(theme:GetStrata("POPUP"))
@@ -258,9 +296,9 @@ local function NewPopup(deps)
             NotifyMoved()
         end)
         f:SetScript("OnHide", OnHidden)
-        f:Hide()
 
-        -- Escape cierra la ventana como a cualquier panel nativo. Se registra una sola vez.
+        -- Escape cierra la ventana como a cualquier panel nativo. Es el ÚLTIMO paso: hasta que la ventana está completa no
+        -- se registra en UISpecialFrames. Se registra una sola vez.
         local registered = false
         for _, name in ipairs(specialFrames) do
             if name == FRAME_NAME then registered = true end
@@ -296,9 +334,16 @@ local function NewPopup(deps)
             error("Popup: UISpecialFrames no está disponible (Escape no podría cerrar la ventana)", 0)
         end
 
-        local ok, f, t, b = pcall(Build, theme, parent, createFrame, specialFrames)
+        local partial = {}
+        local ok, f, t, b = pcall(Build, theme, parent, createFrame, specialFrames, partial)
         if not ok then
-            initError = "Popup: no se pudo crear la ventana: " .. tostring(f)
+            -- El error original va primero y completo; si además la limpieza falla, se añade como nota.
+            local message = "Popup: no se pudo crear la ventana: " .. tostring(f)
+            local cleanupError = Cleanup(partial)
+            if cleanupError then
+                message = message .. " (además, la limpieza del frame parcial falló: " .. cleanupError .. ")"
+            end
+            initError = message
             error(initError, 0)
         end
         frame, title, body = f, t, b

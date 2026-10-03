@@ -105,6 +105,10 @@ responsable de él. El Popup guarda **copias** del contenido.
 
 1. `Init` crea la ventana (oculta) una sola vez; es idempotente. **Un `Init` fallido es definitivo** en la sesión: repetirlo da el mismo
    error sin crear otra ventana, para no dejar ventanas huérfanas (un fallo por Theme no listo sí se puede reintentar).
+   **Limpieza de una construcción fallida:** en el cliente un frame recién creado es visible, así que la ventana se **oculta nada más
+   crearla**, antes de configurar nada; no se registra en `UISpecialFrames` hasta el último paso; y si la construcción falla se intenta
+   dejar el frame parcial **sin scripts y oculto** con llamadas protegidas (`pcall`). Un error durante esa limpieza **no sustituye** al
+   error original: se añade al final como nota. El Popup nunca queda «listo» si la construcción no terminó.
 2. `Show`, `Enqueue` y `Close` antes de `Init` devuelven `not_ready`: nunca crean la ventana por su cuenta.
 3. El estado «visible» es siempre el del frame real. Si una llamada de interfaz falla, se comunica por `geterrorhandler`, se devuelve
    `"ui_error"` y la ventana queda con el contenido que tenía (o cerrada), no a medias.
@@ -190,6 +194,10 @@ sin modificar ninguna.
 - **No probado en un cliente real de Classic Era:** `BackdropTemplate`, `UIPanelCloseButton`, `UISpecialFrames`, `SetClampedToScreen`, la
   textura `WHITE8X8` y las fuentes, ni el aspecto real. Son los mismos recursos que usaba el popup original (que su autor probó), salvo
   `SetClampedToScreen`, que el original no usaba (se llama solo si existe).
+- **Frame parcial tras un `Init` fallido:** WoW no permite destruir un frame con nombre, así que el parcial sigue existiendo hasta cerrar
+  el juego (oculto, sin scripts y sin registrar en Escape), igual que su botón de cierre, hijo suyo. No se reutiliza ni se intenta crear
+  otro. Si la propia llamada a `Hide` fallara no existe otro mecanismo verificado para esconderlo: el error de limpieza se comunica, no se
+  oculta el problema. Todo esto está verificado con el mock, no en un cliente real.
 - Los títulos muy largos pueden envolver y solaparse con el separador (no se recortan).
 - Las fuentes solo cubren el alfabeto latino.
 - La posición arrastrada no persiste entre sesiones.

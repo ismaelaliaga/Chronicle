@@ -385,6 +385,116 @@ do
     end })
     check("17b. si Theme no puede aplicar el backdrop (ui_error), Init falla con el motivo",
         (function() local ok, err = pcall(badBackdrop.popup.Init, badBackdrop.popup); return ok == false and tostring(err):find("ApplyBackdrop", 1, true) ~= nil end)())
+
+    -- ---- Limpieza del frame parcial ----
+    -- En el cliente real un frame recién creado es VISIBLE (el mock los crea ocultos y enmascararía el defecto), así que
+    -- estas fábricas lo crean visible. `setup(frame, log)` sabotea el frame; `log` registra el orden de las llamadas.
+    local function Visible(setup)
+        local state = { log = {} }
+        state.ctx = Make({ createFrame = function(real, kind, name, parent, template)
+            local f = real(kind, name, parent, template)
+            if kind == "Frame" then
+                f.shown = true
+                state.frame = f
+                local realHide, realSetSize = f.Hide, f.SetSize
+                f.Hide = function(self, ...) state.log[#state.log + 1] = "Hide"; return realHide(self, ...) end
+                f.SetSize = function(self, ...) state.log[#state.log + 1] = "SetSize"; return realSetSize(self, ...) end
+                if setup then setup(f, state) end
+            end
+            return f
+        end })
+        return state
+    end
+    local function Run(state)
+        local ok, err = pcall(state.ctx.popup.Init, state.ctx.popup)
+        return ok, tostring(err)
+    end
+    local function Clean(state)
+        local f = state.frame
+        return f ~= nil and f:IsShown() == false and state.ctx.popup:IsReady() == false
+            and countIn(state.ctx.special, FRAME_NAME) == 0 and #state.ctx.special == 0
+    end
+
+    local fontFail = Visible(function(f) f.CreateFontString = function() error("sin fuentes") end end)
+    local okF, errF = Run(fontFail)
+    check("17c. CreateFontString falla con el frame visible: Init falla, el frame parcial queda OCULTO, sin Escape y no listo",
+        okF == false and errF:find("sin fuentes", 1, true) ~= nil and Clean(fontFail))
+
+    local backdropFail = Visible(function(f) f.SetBackdrop = function() error("sin backdrop") end end)
+    local okB, errB = Run(backdropFail)
+    check("17d. el backdrop falla con el frame visible: el frame parcial queda oculto, sin Escape y no listo",
+        okB == false and errB:find("ApplyBackdrop", 1, true) ~= nil and Clean(backdropFail))
+
+    local pointFail = Visible(function(f) f.SetPoint = function() error("sin anclaje") end end)
+    local okP, errP = Run(pointFail)
+    check("17e. otra operación de configuración falla (SetPoint): el frame parcial queda oculto, sin Escape y no listo",
+        okP == false and errP:find("sin anclaje", 1, true) ~= nil and Clean(pointFail))
+
+    -- el frame se oculta INMEDIATAMENTE tras crearlo, antes de configurar nada: no depende de la limpieza posterior
+    local order = Visible(function(f) f.SetPoint = function() error("sin anclaje") end end)
+    Run(order)
+    check("17f. el frame se oculta lo primero tras crearlo, antes de SetSize y del resto de configuración",
+        order.log[1] == "Hide" and order.log[2] == "SetSize")
+    local seenShown
+    local atFailure = Visible(function(f) f.SetPoint = function(self) seenShown = self.shown; error("sin anclaje") end end)
+    Run(atFailure)
+    check("17g. en el momento exacto del fallo de configuración el frame ya estaba oculto (no solo después de limpiar)", seenShown == false)
+
+    -- un fallo posterior a haber puesto los scripts (el registro de Escape): la limpieza los quita y oculta el frame
+    local lateFail = { log = {} }
+    local poisoned = setmetatable({}, { __index = function() error("sin registro de Escape") end })
+    local late = Make({ special = poisoned, createFrame = function(real, kind, name, parent, template)
+        local f = real(kind, name, parent, template)
+        if kind == "Frame" then f.shown = true; lateFail.frame = f end
+        return f
+    end })
+    lateFail.ctx = late
+    local okL, errL = Run(lateFail)
+    local scripts = lateFail.frame and lateFail.frame.__scripts or {}
+    check("17h. fallo al final (registro de Escape): Init falla con ese motivo, el frame parcial queda oculto y SIN scripts",
+        okL == false and errL:find("sin registro de Escape", 1, true) ~= nil and lateFail.frame:IsShown() == false
+            and scripts.OnHide == nil and scripts.OnDragStart == nil and scripts.OnDragStop == nil and late.popup:IsReady() == false)
+
+    -- un error en la propia limpieza no sustituye ni esconde el error original
+    local hides = 0
+    local dirty = Visible(function(f)
+        f.SetPoint = function() error("fallo original de configuración") end
+        local first = f.Hide
+        f.Hide = function(self, ...)
+            hides = hides + 1
+            if hides >= 2 then error("Hide roto en la limpieza") end
+            return first(self, ...)
+        end
+        f.SetScript = function() error("SetScript roto en la limpieza") end
+    end)
+    local okD, errD = Run(dirty)
+    check("17i. si la limpieza también falla, el error original sigue siendo el principal y el de la limpieza se añade como nota",
+        okD == false and errD:find("fallo original de configuración", 1, true) ~= nil
+            and errD:find("fallo original de configuración", 1, true) < (errD:find("limpieza", 1, true) or 0)
+            and errD:find("Hide roto en la limpieza", 1, true) ~= nil and errD:find("SetScript roto en la limpieza", 1, true) ~= nil
+            and dirty.ctx.popup:IsReady() == false and #dirty.ctx.special == 0)
+    local okD2, errD2 = Run(dirty)
+    check("17j. tras una limpieza fallida el fallo sigue siendo definitivo y no se crea otro frame",
+        okD2 == false and errD2 == errD and dirty.ctx.factoryCalls == 1 and #dirty.ctx.frames == 1)
+
+    -- repetir Init tras un fallo no crea más frames y nada lanza error
+    local again = Visible(function(f) f.SetPoint = function() error("sin anclaje") end end)
+    local _, first = Run(again); local _, second = Run(again); local _, third = Run(again)
+    check("17k. repetir Init tras un fallo da el mismo error y no crea más frames que el parcial (1 ventana; sin Escape)",
+        first == second and second == third and again.ctx.factoryCalls == 1 and #again.ctx.frames == 1 and Clean(again))
+    check("17l. tras el fallo el Popup es inerte: Show/Enqueue/Close/CloseAll no lanzan error ni muestran el frame parcial",
+        select(2, again.ctx.popup:Show(A)) == "not_ready" and select(2, again.ctx.popup:Enqueue(A)) == "not_ready"
+            and again.ctx.popup:Close() == false and (pcall(again.ctx.popup.CloseAll, again.ctx.popup))
+            and again.ctx.popup:GetQueueSize() == 0 and again.ctx.popup:IsVisible() == false and again.frame:IsShown() == false)
+
+    -- el camino correcto no cambia: una ventana, oculta, registrada una vez, con la limpieza sin tocar nada
+    local good = Visible()
+    local okG = Run(good)
+    check("17m. Init correcto (aunque el frame nazca visible): una sola ventana, oculta, lista y registrada en Escape una vez",
+        okG == true and good.ctx.popup:IsReady() and good.frame:IsShown() == false and #good.ctx.frames == 2
+            and countIn(good.ctx.special, FRAME_NAME) == 1 and good.frame.__scripts.OnHide ~= nil and good.log[1] == "Hide")
+    check("17n. tras un Init correcto el Popup funciona con normalidad", good.ctx.popup:Show(A) == true and good.ctx.popup:IsVisible()
+        and good.ctx.popup:GetContent().title == A.title)
 end
 
 -- ===================== Fallos de la interfaz en uso =====================
