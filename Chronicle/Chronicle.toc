@@ -32,6 +32,7 @@ UI/Popup.lua
 UI/CodexModel.lua
 UI/CodexScroll.lua
 UI/CodexNavigation.lua
+UI/CodexNpcModel.lua
 UI/CodexPage.lua
 UI/Codex.lua
 Localization/esES/EasternKingdoms.lua

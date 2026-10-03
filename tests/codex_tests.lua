@@ -508,7 +508,7 @@ do
             local list = {}
             for name in pairs(deps) do list[#list + 1] = name end
             table.sort(list)
-            return table.concat(list, ",") == "CodexModel,CodexNavigation,CodexPage,CodexScroll,Discovery,Events,Localization,Registry,Theme"
+            return table.concat(list, ",") == "CodexModel,CodexNavigation,CodexNpcModel,CodexPage,CodexScroll,Discovery,Events,Localization,Registry,Theme"
         end)())
     check("12e. el Codex no usa temporizadores, animaciones, sonidos ni eventos del cliente",
         (function()

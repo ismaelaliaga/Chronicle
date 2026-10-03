@@ -9,6 +9,14 @@ Chronicle = Chronicle or {}
 -- ni deja hueco. Los textos se muestran ENTEROS (nada se recorta): el alto de la página se mide con el texto ya puesto y la
 -- zona se desplaza con la rueda del ratón. Sin página actual se muestra una indicación discreta.
 --
+-- VISOR 3D Y ENLACES (Fase 11). Si el modelo da `page.model` (un NPC descubierto con un displayID válido) y el visor
+-- (CodexNpcModel, opcional) está disponible y consigue mostrarlo, se reserva su recuadro bajo los datos del personaje; si no,
+-- la página no deja hueco ni marco. El visor se oculta y se vacía en CADA repintado antes de decidir, así que nunca queda a la
+-- vista el modelo de la página anterior. Después del texto, cada sección de `page.links` (ver CodexModel) se pinta como una
+-- cabecera y una lista de botones: pulsar uno hace model:Select(id), es decir, la navegación y el historial de siempre. Un destino
+-- bloqueado se pinta como «???» en el color LOCKED. Las filas de enlaces son un conjunto reutilizado: lo que sobra se oculta y se
+-- vacía (sin texto ni ID residuales).
+--
 -- PÁGINA BLOQUEADA (Fase 10): si el modelo dice que la entidad no está descubierta, la página es solo «???» (color LOCKED) y
 -- una línea que explica el motivo; nada más. La vista no conoce el ID ni el nombre real, no se los dan.
 --
@@ -16,7 +24,7 @@ Chronicle = Chronicle or {}
 -- último (la página actual) es solo texto. Si no caben en el ancho disponible se quitan tramos por el principio y se
 -- antepone «...». Los breadcrumbs NO son el historial: este es el de Atrás/Adelante.
 --
--- API: Chronicle.CodexPage.New({ theme, createFrame, scroll }) -> vista
+-- API: Chronicle.CodexPage.New({ theme, createFrame, scroll [, npcModel] }) -> vista   (`npcModel` = el módulo CodexNpcModel)
 --   vista:Attach(parent, width, height, model)   construye los widgets (lanza error si algo falla)
 --   vista:Refresh()                              repinta desde el modelo
 -- Colores, fuentes y medidas salen de Theme. Literales de esta vista: los símbolos de los botones («<», «>»), el separador
@@ -43,6 +51,8 @@ local function NewPage(deps)
     local back, forward, backLabel, forwardLabel, ellipsis
     local crumbs, separators = {}, {}
     local title, kind, location, details, descriptionText, rule, bodyText, empty
+    local modelView -- el visor 3D (nil si no hay módulo)
+    local linkHeaders, linkRows = {}, {} -- cabeceras y botones de enlace (se crean al hacer falta y se reutilizan)
     local width
     local renderedId = false -- página pintada (false = ninguna vez); solo se repinta si cambia
 
@@ -79,6 +89,15 @@ local function NewPage(deps)
         crumb.button, crumb.label = NewButtonWithLabel("")
         crumb.button:SetScript("OnClick", function() if crumb.id then model:Select(crumb.id) end end)
         return crumb
+    end
+
+    local function NewLinkRow()
+        local row = {}
+        row.button = createFrame("Button", nil, child)
+        row.label = NewText(row.button, "BODY")
+        row.label:SetPoint("LEFT", row.button, "LEFT", 0, 0)
+        row.button:SetScript("OnClick", function() if row.id then model:Select(row.id) end end)
+        return row
     end
 
     local function NewSeparator()
@@ -139,6 +158,10 @@ local function NewPage(deps)
         bodyText:SetSpacing(theme:GetLayout("POPUP_LINE_SPACING"))
         empty = NewText(child, "SECONDARY", "GameFontNormalSmall")
         empty:SetText(TEXT_EMPTY)
+        if deps.npcModel and type(deps.npcModel.New) == "function" then
+            modelView = deps.npcModel.New({ theme = theme, createFrame = createFrame })
+            modelView:Attach(child, scroll:GetContentWidth() - 2 * pad) -- no lanza errores: sin visor, la página sigue igual
+        end
     end
 
     local function MeasuredHeight(fontString)
@@ -166,6 +189,17 @@ local function NewPage(deps)
             widget:Hide()
         end
         rule:Hide()
+        -- Se vacía todo lo que depende de la página anterior (visor y enlaces) ANTES de decidir qué hay en la nueva.
+        if modelView then modelView:Hide() end
+        for _, header in ipairs(linkHeaders) do
+            header:SetText("")
+            header:Hide()
+        end
+        for _, row in ipairs(linkRows) do
+            row.id = nil
+            row.label:SetText("")
+            row.button:Hide()
+        end
 
         if not page then
             local y = Place(empty, TEXT_EMPTY, pad, textWidth, pad, gap)
@@ -196,6 +230,10 @@ local function NewPage(deps)
             y = Place(details, table.concat(parts, "   "), y, textWidth, pad, gap / 2)
         end
         y = y + gap / 2
+        if page.model and modelView and modelView:Show(page.model, pad, y) then
+            local _, modelHeight = modelView:GetSize()
+            y = y + modelHeight + gap
+        end
         if page.description then
             y = Place(descriptionText, page.description, y, textWidth, pad, gap * 2)
         end
@@ -207,6 +245,35 @@ local function NewPage(deps)
             rule:Show()
             y = y + line + gap
             y = Place(bodyText, page.body, y, textWidth, pad, gap * 2)
+        end
+        -- Enlaces a otras entidades (cada sección: una cabecera y un botón por destino)
+        local indent, rowHeight = theme:GetLayout("CODEX_ROW_INDENT"), theme:GetLayout("CODEX_ROW_HEIGHT")
+        local rowIndex = 0
+        for sectionIndex, section in ipairs(page.links or {}) do
+            local header = linkHeaders[sectionIndex]
+            if not header then
+                header = NewText(child, "SECONDARY", "GameFontNormalSmall")
+                linkHeaders[sectionIndex] = header
+            end
+            y = Place(header, section.label, y, textWidth, pad, gap / 2)
+            for _, item in ipairs(section.items) do
+                rowIndex = rowIndex + 1
+                local row = linkRows[rowIndex]
+                if not row then
+                    row = NewLinkRow()
+                    linkRows[rowIndex] = row
+                end
+                row.id = item.id
+                row.button:ClearAllPoints()
+                row.button:SetPoint("TOPLEFT", child, "TOPLEFT", pad + indent, -y)
+                row.button:SetSize(textWidth - indent, rowHeight)
+                row.label:SetWidth(textWidth - indent)
+                row.label:SetText(item.name)
+                Tint(row.label, item.locked and "LOCKED" or (item.nameIsFallback and "TEXT_MUTED" or "GOLD_DIM"))
+                row.button:Show()
+                y = y + rowHeight
+            end
+            y = y + gap
         end
         scroll:SetContentHeight(y)
         scroll:ScrollTo(0) -- cada página nueva empieza arriba

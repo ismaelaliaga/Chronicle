@@ -62,13 +62,15 @@ local FRAME_NAME = "ChronicleCodexFrame"
 local TEXT_TITLE = "Chronicle"
 local DEFAULT_EVENT_DISCOVERED = nil -- el nombre del evento lo da Discovery (EVENT_DISCOVERED); no se duplica aquí
 
--- Módulos internos que cablea el Codex (y que se comprueban antes de crear nada).
+-- Módulos internos que cablea el Codex (y que se comprueban antes de crear nada). CodexNpcModel (el visor 3D, Fase 11) es
+-- OPCIONAL: sin él las páginas funcionan igual, sin modelo.
 local INTERNAL_MODULES = { "CodexModel", "CodexScroll", "CodexNavigation", "CodexPage" }
 
 -- Lo que este módulo da por existente en Theme. Init falla antes de crear nada si falta alguno.
 local REQUIRED_LAYOUT = { "CODEX_WIDTH", "CODEX_HEIGHT", "CODEX_INSET", "CODEX_HEADER_HEIGHT", "CODEX_NAV_WIDTH",
     "CODEX_DIVIDER_THICKNESS", "CODEX_ROW_HEIGHT", "CODEX_ROW_INDENT", "CODEX_TOGGLE_WIDTH", "CODEX_TOOLBAR_HEIGHT",
-    "CODEX_BUTTON_WIDTH", "CODEX_SCROLLBAR_WIDTH", "CODEX_MIN_THUMB_HEIGHT", "CODEX_SCROLL_STEP", "POPUP_CLOSE_OFFSET" }
+    "CODEX_BUTTON_WIDTH", "CODEX_SCROLLBAR_WIDTH", "CODEX_MIN_THUMB_HEIGHT", "CODEX_SCROLL_STEP", "CODEX_MODEL_WIDTH",
+    "CODEX_MODEL_HEIGHT", "POPUP_CLOSE_OFFSET" }
 
 local function IsObject(value)
     return type(value) == "table" or type(value) == "userdata"
@@ -225,7 +227,7 @@ local function NewCodex(deps)
         content:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -inset, inset)
         local contentWidth = layout("CODEX_WIDTH") - 2 * inset - navWidth - line
         content:SetSize(contentWidth, paneHeight)
-        local page = Chronicle.CodexPage.New({ theme = theme, createFrame = createFrame, scroll = scroll })
+        local page = Chronicle.CodexPage.New({ theme = theme, createFrame = createFrame, scroll = scroll, npcModel = Chronicle.CodexNpcModel })
         page:Attach(content, contentWidth, paneHeight, model)
         navigation:Refresh()
         page:Refresh()

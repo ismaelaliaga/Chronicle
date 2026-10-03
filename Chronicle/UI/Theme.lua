@@ -97,6 +97,9 @@ local DEFAULT_DEFINITIONS = {
         CODEX_SCROLLBAR_WIDTH = 6,
         CODEX_MIN_THUMB_HEIGHT = 20,
         CODEX_SCROLL_STEP = 44, -- lo que avanza cada paso de la rueda del ratón
+        -- Visor 3D de NPC en la página (Fase 11): el tamaño del recuadro del modelo (proporción vertical de un personaje).
+        CODEX_MODEL_WIDTH = 150,
+        CODEX_MODEL_HEIGHT = 170,
     },
     -- La ventana del Codex queda POR DEBAJO del popup (HIGH) para que un aviso nunca quede tapado por ella.
     strata = { POPUP = "HIGH", CODEX = "MEDIUM" },

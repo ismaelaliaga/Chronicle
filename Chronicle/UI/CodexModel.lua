@@ -57,7 +57,7 @@ Chronicle = Chronicle or {}
 -- mostrar (Localization la avisa como advertencia).
 --
 -- PÁGINAS. GetPage(id) devuelve { id, type, typeLabel, name, nameIsFallback, description, body, bodyUnresolved,
--- location, details }:
+-- location, details, model, links }:
 --   description    texto corto de Localization (descriptionKey o ID) | nil
 --   body           cuerpo del artículo de lore | nil. Solo existe si la entidad declara `textKey`. DECISIÓN DE DISEÑO ABIERTA:
 --                  Localization no tiene un campo de artículo (sus campos son name, description, hint, race, role) y solo
@@ -66,6 +66,19 @@ Chronicle = Chronicle or {}
 --                  descripción NUNCA se usa como cuerpo ni al revés. Hoy ninguna entidad declara textKey.
 --   location       { id, name, nameIsFallback } del `located_in`, si lo hay y está registrado | nil (dato contextual)
 --   details        { { label = "Raza", value = ... }, { label = "Rol", value = ... } } con lo que Localization tenga | {}
+--   model          { displayID, npcID } si la entidad es un NPC con un `displayID` entero positivo | nil. El modelo 3D lo
+--                  dibuja la vista (CodexNpcModel); aquí solo se decide SI procede. Una entidad que no es NPC nunca lo tiene, y
+--                  una bloqueada tampoco (su página no lleva ni este dato).
+--   links          lista de secciones de enlaces a otras entidades, SOLO en páginas descubiertas:
+--                    { kind = "contains", label = "Situado aquí", items = {...} }   entidades cuyo `located_in` es esta (la relación
+--                                   derivada «contiene» por located_in; NO los hijos por `parent`, que ya son el árbol)
+--                    { kind = "related", label = "Relacionado con", items = {...} } `related_to`, visto desde los dos lados
+--                  Cada item es { id, name, nameIsFallback, locked }. Un destino se evalúa POR SÍ SOLO: si está bloqueado su
+--                  nombre es «???» (se puede abrir y su página es la bloqueada). Los destinos que el Registry no tiene se
+--                  descartan (no hay enlaces que no se puedan resolver), cada entidad aparece UNA vez en toda la página (si es a
+--                  la vez «situada aquí» y «relacionada», sale en «Situado aquí»), la propia entidad no se enlaza a sí misma y
+--                  las secciones vacías no existen. No se enlaza `located_in` (sigue siendo el dato contextual `location`) ni
+--                  `parent` (el árbol y los breadcrumbs). Orden: tipo e ID, como el árbol.
 --   `hint` (la pista de descubrimiento) NO se muestra: pertenece a la integración con Discovery, que no existe aún.
 --
 -- HISTORIAL (como el de un navegador, en memoria, máximo MAX_HISTORY entradas; al llenarse se descarta la más antigua):
@@ -409,7 +422,59 @@ local function NewModel(deps)
             return true
         end
         local entity = registry:Get(current)
-        return entity ~= nil and entity.located_in == id
+        if entity ~= nil and entity.located_in == id then
+            return true
+        end
+        -- Un enlace de la página cambia su etiqueta («???» -> nombre) cuando se descubre su destino.
+        for _, section in ipairs(self:GetPage(current).links or {}) do
+            for _, item in ipairs(section.items) do
+                if item.id == id then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    local function IsPositiveInteger(value)
+        return type(value) == "number" and value == value and value >= 1 and value < 4294967296 and value == math.floor(value)
+    end
+
+    -- Secciones de enlaces de una entidad (ver «PÁGINAS»). Solo se llama para entidades descubiertas.
+    local function BuildLinks(id)
+        local sections = {}
+        local seen = { [id] = true }
+        local function Collect(candidates)
+            local entities = {}
+            for _, otherId in ipairs(candidates) do
+                if not seen[otherId] and registry:Has(otherId) then
+                    seen[otherId] = true
+                    entities[#entities + 1] = registry:Get(otherId)
+                end
+            end
+            local items = {}
+            for _, otherId in ipairs(SortEntities(entities)) do
+                local name, fallback, locked = self:GetName(otherId)
+                items[#items + 1] = { id = otherId, name = name, nameIsFallback = fallback, locked = locked == true }
+            end
+            return items
+        end
+        local contained = {}
+        for _, childId in ipairs(registry:GetContained(id)) do
+            local child = registry:Get(childId)
+            if child and child.located_in == id then
+                contained[#contained + 1] = childId
+            end
+        end
+        local items = Collect(contained)
+        if #items > 0 then
+            sections[#sections + 1] = { kind = "contains", label = "Situado aquí", items = items }
+        end
+        items = Collect(registry:GetRelated(id))
+        if #items > 0 then
+            sections[#sections + 1] = { kind = "related", label = "Relacionado con", items = items }
+        end
+        return sections
     end
 
     function self:GetPage(id)
@@ -440,6 +505,10 @@ local function NewModel(deps)
             local locName, locFallback, locLocked = self:GetName(entity.located_in)
             page.location = { id = entity.located_in, name = locName, nameIsFallback = locFallback, locked = locLocked == true }
         end
+        if entity.type == "npc" and IsPositiveInteger(entity.displayID) then
+            page.model = { displayID = entity.displayID, npcID = IsPositiveInteger(entity.npcID) and entity.npcID or nil }
+        end
+        page.links = BuildLinks(id)
         for _, item in ipairs(DETAIL_FIELDS) do
             local ok, value = pcall(localization.Get, localization, id, item.field)
             if ok and type(value) == "string" and value ~= "" then

@@ -176,8 +176,20 @@ function TextureMethods:SetWidth(w) self.width = w end
 function TextureMethods:Show() self.shown = true end
 function TextureMethods:Hide() self.shown = false end
 
+-- PlayerModel: solo ese tipo de frame tiene los métodos de modelo (como en el cliente; otros tipos que los llamen fallan).
+-- No renderiza nada: guarda lo que se le pidió. No dice si el cliente real tiene el tipo ni cada método.
+local ModelMethods = setmetatable({}, { __index = FrameMethods })
+ModelMethods.__index = ModelMethods
+function ModelMethods:SetDisplayInfo(displayID) self.displayInfo = displayID; self.model = { by = "display", id = displayID } end
+function ModelMethods:SetCreature(creatureID, displayID)
+    self.creatureID, self.creatureDisplayID = creatureID, displayID
+    self.model = { by = "creature", id = creatureID, displayID = displayID }
+end
+function ModelMethods:ClearModel() self.displayInfo, self.creatureID, self.creatureDisplayID, self.model = nil, nil, nil, nil end
+
 function CreateFrame(kind, name, parent, template)
-    local frame = setmetatable({ kind = kind, name = name, parent = parent, template = template, points = {} }, FrameMethods)
+    local frame = setmetatable({ kind = kind, name = name, parent = parent, template = template, points = {} },
+        kind == "PlayerModel" and ModelMethods or FrameMethods)
     if name then
         _G[name] = frame
         NamedGlobals[#NamedGlobals + 1] = name
