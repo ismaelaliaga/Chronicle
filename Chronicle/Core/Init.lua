@@ -49,6 +49,11 @@ local MODULES = {
     { name = "Proximity", required = true, requires = { "MapPosition", "Discovery" } },
     -- ZoneDiscovery empieza a escuchar los eventos de zona: necesita nombres, el Resolver y Discovery listos.
     { name = "ZoneDiscovery", required = true, requires = { "MapPosition", "Resolver", "Discovery" } },
+    -- Interfaz: OPCIONAL a propósito. Un fallo puramente visual (una fuente, un frame) no debe impedir que Discovery y el
+    -- resto de servicios funcionen ni que se anuncie el arranque; queda diagnosticado en Init.failed. Quien use el
+    -- Popup debe comprobar Popup:IsReady(). Popup depende de Theme: si Theme falla, Popup no se intenta.
+    { name = "Theme", required = false },
+    { name = "Popup", required = false, requires = { "Theme" } },
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él
 }
 

@@ -27,6 +27,8 @@ Services/Discovery.lua
 Services/MapPosition.lua
 Services/Proximity.lua
 Services/ZoneDiscovery.lua
+UI/Theme.lua
+UI/Popup.lua
 Localization/esES/EasternKingdoms.lua
 Localization/esES/DunMorogh.lua
 Localization/esES/LochModan.lua

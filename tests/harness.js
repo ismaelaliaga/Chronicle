@@ -47,6 +47,8 @@ const TEST_FILES = [
     "mapposition_tests.lua",
     "proximity_tests.lua",
     "zonediscovery_tests.lua",
+    "theme_tests.lua",
+    "popup_tests.lua",
 ];
 const testFileSources = TEST_FILES.map((name) => {
     const src = fs.readFileSync(path.join(__dirname, name), "utf8");
