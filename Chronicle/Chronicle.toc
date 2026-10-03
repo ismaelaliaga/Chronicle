@@ -5,7 +5,7 @@
 ## Version: 0.2.0-dev
 ## SavedVariablesPerCharacter: ChronicleCharDB
 
-# Orden de carga. Capas: Core -> Data -> Localization -> Services -> (futura UI). Cada fichero
+# Orden de carga. Capas: Core -> Data -> Localization -> Services -> UI. Cada fichero
 # solo depende de los anteriores. Core/Init.lua va el ULTIMO: arranca los modulos, asi que todos
 # deben estar ya definidos.
 #   - Los datos de entidades necesitan Chronicle.Registry y no dependen del orden entre si: las

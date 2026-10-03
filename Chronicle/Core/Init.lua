@@ -32,8 +32,8 @@ local ADDON_NAME = "Chronicle"
 
 -- Orden de inicialización. Cada módulo puede definir Module:Init(); si no, basta con que
 -- exista. Events no tiene estado que preparar, pero es requerido y va primero: todo lo
--- que viene después puede emitir/escuchar eventos al arrancar. Los futuros Services y
--- UI se añaden al final, en este orden de capas: Core -> Services -> UI.
+-- que viene después puede emitir/escuchar eventos al arrancar. Los Services y la UI van
+-- después, en este orden de capas: Core -> Services -> UI.
 local MODULES = {
     { name = "Events", required = true },
     { name = "State", required = true },

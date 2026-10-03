@@ -1,9 +1,9 @@
 Chronicle = Chronicle or {}
 
--- Registro y despacho del comando /chronicle. En esta fase solo hay un comando de
--- comprobación (/chronicle sin argumentos): sirve para verificar que el Core está
--- activo. Los comandos de producto (where, reset, trivia...) llegarán en su fase y se
--- añadirán con Slash:Register().
+-- Registro y despacho del comando /chronicle. Aquí solo vive el comando de comprobación
+-- (/chronicle sin argumentos): sirve para verificar que el Core está activo. Los
+-- subcomandos de producto (help, codex, options, trivia, test, where) los registra
+-- UI/Commands.lua con Slash:Register().
 
 local Utils = Chronicle.Utils
 
