@@ -528,6 +528,7 @@ end
 -- ===================== INTERFAZ: actualización en vivo con el Discovery real =====================
 local eventRegistrations = 0
 Boot(function()
+    Chronicle.Diagnostics.Init = function() end -- (el depurador temporal registra su propio oyente: aquí se cuentan solo los del Codex)
     local events = Chronicle.Events
     local original = events.Register
     events.Register = function(self, name, callback)
@@ -628,6 +629,7 @@ do
     local regs = 0
     Boot(function()
         Chronicle.Discovery.Init = function() error("discovery roto") end
+        Chronicle.Diagnostics.Init = function() end -- (ver arriba)
         local events = Chronicle.Events
         local original = events.Register
         events.Register = function(self, name, callback)
@@ -1009,6 +1011,7 @@ do
     local registrations = 0
     Boot(function()
         Chronicle.Discovery.IsReady = function() error("IsReady roto en el arranque") end
+        Chronicle.Diagnostics.Init = function() end -- (ver arriba)
         local events = Chronicle.Events
         local original = events.Register
         events.Register = function(self, name, callback)
