@@ -248,6 +248,56 @@ FireEvent("PLAYER_TARGET_CHANGED")
 check("E3. el mismo NPC visto por placa de nombre y luego como objetivo produce UN solo descubrimiento y UN solo aviso",
     Chronicle.Discovery:Count("npc") == 1 and Chronicle.DiscoveryNotice:GetStats().requested == 1 and N():GetLast().status == "already")
 
+-- ===================== Aislar cada vía (objetivo / ratón / placa / conversación) =====================
+Boot()
+setUnit("target", GRELIN, "Grelin Whitebeard") -- SOLO objetivo: no hay ninguna unidad bajo el ratón
+FireEvent("PLAYER_TARGET_CHANGED")
+local viaTarget = N():GetLast()
+check("P1. seleccionar un NPC lo descubre SIN depender del ratón: con mouseover vacío lo descubre PLAYER_TARGET_CHANGED («discovered», unidad target)",
+    units.mouseover == nil and viaTarget.status == "discovered" and viaTarget.event == "PLAYER_TARGET_CHANGED" and viaTarget.unit == "target"
+        and Chronicle.Discovery:IsDiscovered("npc:grelin_whitebeard"))
+Boot()
+setUnit("mouseover", STEN, "Sten Stoutarm") -- SOLO ratón: no hay objetivo
+FireEvent("UPDATE_MOUSEOVER_UNIT")
+local viaMouse = N():GetLast()
+check("P2. el ratón descubre a un NPC SIN seleccionarlo: con target vacío lo descubre UPDATE_MOUSEOVER_UNIT («discovered», unidad mouseover)",
+    units.target == nil and viaMouse.status == "discovered" and viaMouse.event == "UPDATE_MOUSEOVER_UNIT" and viaMouse.unit == "mouseover"
+        and Chronicle.Discovery:IsDiscovered("npc:sten_stoutarm"))
+Boot()
+setUnit("mouseover", GRELIN, "Grelin Whitebeard") -- hacer clic en un NPC exige tener el cursor encima: el ratón llega PRIMERO
+FireEvent("UPDATE_MOUSEOVER_UNIT")
+local afterHover = N():GetLast()
+setUnit("target", GRELIN, "Grelin Whitebeard") -- el clic lo selecciona; el cursor sigue encima
+FireEvent("PLAYER_TARGET_CHANGED")
+FireEvent("UPDATE_MOUSEOVER_UNIT")
+local afterClick = N():GetLast()
+check("P3. HOVER + CLIC: el descubrimiento lo hace el RATÓN (primer evento); el evento de objetivo posterior ve «already» (memoria) y NO cuenta como descubrimiento, y /chronicle npc muestra la ÚLTIMA observación, no la que descubrió",
+    afterHover.status == "discovered" and afterHover.event == "UPDATE_MOUSEOVER_UNIT" and afterClick.status == "already" and afterClick.cached == true
+        and Chronicle.Discovery:Count("npc") == 1 and Chronicle.DiscoveryNotice:GetStats().requested == 1)
+
+Boot()
+setUnit("target", GRELIN, "Grelin Whitebeard"); setUnit("mouseover", GRELIN, "Grelin Whitebeard"); setUnit("nameplate2", GRELIN, "Grelin Whitebeard"); setUnit("npc", GRELIN, "Grelin Whitebeard")
+FireEvent("PLAYER_TARGET_CHANGED"); FireEvent("UPDATE_MOUSEOVER_UNIT"); FireEvent("NAME_PLATE_UNIT_ADDED", "nameplate2"); FireEvent("GOSSIP_SHOW")
+check("P4. el mismo NPC visto por las CUATRO vías genera un único descubrimiento, un único aviso y una única entrada guardada",
+    Chronicle.Discovery:Count("npc") == 1 and Chronicle.DiscoveryNotice:GetStats().requested == 1 and (N():GetStats().discovered or 0) == 1 and (N():GetStats().already or 0) == 3)
+
+Boot()
+local senirGuid = guidOf(1252) -- NPC migrado pero NO habilitado
+setUnit("target", senirGuid, "Senir Whitebeard"); setUnit("mouseover", senirGuid, "Senir Whitebeard"); setUnit("nameplate2", senirGuid, "Senir Whitebeard"); setUnit("npc", senirGuid, "Senir Whitebeard")
+FireEvent("PLAYER_TARGET_CHANGED"); FireEvent("UPDATE_MOUSEOVER_UNIT"); FireEvent("NAME_PLATE_UNIT_ADDED", "nameplate2"); FireEvent("GOSSIP_SHOW")
+check("P5. un NPC NO habilitado no se descubre por NINGUNA de las cuatro vías (4 observaciones «not_enabled», 0 descubrimientos, 0 avisos)",
+    Chronicle.Discovery:Count("npc") == 0 and (N():GetStats().not_enabled or 0) == 4 and popups() == 0)
+
+Boot()
+local realGuidFn = UnitGUID
+UnitGUID = function(token) if token == "mouseover" then error("API del ratón rota") end return realGuidFn(token) end
+setUnit("target", GRELIN, "Grelin Whitebeard"); setUnit("mouseover", STEN, "Sten Stoutarm")
+local okMouse = pcall(FireEvent, "UPDATE_MOUSEOVER_UNIT")
+FireEvent("PLAYER_TARGET_CHANGED")
+UnitGUID = realGuidFn
+check("P6. un error en la vía del ratón no impide la del objetivo: el ratón no descubre ni lanza error y el objetivo sí descubre",
+    okMouse and #ReportedErrors == 0 and not Chronicle.Discovery:IsDiscovered("npc:sten_stoutarm") and Chronicle.Discovery:IsDiscovered("npc:grelin_whitebeard"))
+
 -- ===================== Estructura =====================
 check("S1. el servicio no referencia la SavedVariable ni toca Popup/State, y el .toc carga datos antes que el servicio", (function()
     for _, file in ipairs(ADDON_FILES) do
