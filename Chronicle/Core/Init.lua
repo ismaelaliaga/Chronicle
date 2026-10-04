@@ -59,6 +59,8 @@ local MODULES = {
     { name = "Codex", required = false, requires = { "Theme", "Registry", "Localization" } },
     -- Avisos de descubrimiento: une el evento de Discovery con el Popup. Opcional: si falla, Discovery y el Codex siguen funcionando.
     { name = "DiscoveryNotice", required = false, requires = { "Discovery" } },
+    -- Descubrimiento de NPC por GUID (Fase 14): opcional; sin él el resto funciona. Solo pide Discovery:Discover; Discovery guarda y DiscoveryNotice avisa.
+    { name = "NpcDiscovery", required = false, requires = { "Discovery", "Registry", "Resolver" } },
     -- Fase 12: integraciones OPCIONALES. Ninguna es requerida: si falla, queda en Init.failed y el resto (Discovery, Codex, Popup...) funciona.
     -- `requires` solo nombra lo que el módulo NO puede usar sin esa pieza; el resto de dependencias (Popup, Codex...) se comprueba al usarlas.
     { name = "Options", required = false, requires = { "State" } }, -- preferencias, guardadas con State

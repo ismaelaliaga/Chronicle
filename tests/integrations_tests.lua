@@ -746,7 +746,7 @@ do
     local slashFn = SlashCmdList["CHRONICLE"]
     Chronicle.Commands:Init(); Chronicle.Commands:Init()
     check("19. registrar los comandos otra vez no cambia el comando de barra ni duplica nada",
-        SlashCmdList["CHRONICLE"] == slashFn and table.concat(Chronicle.Commands:GetCommands(), ",") == "codex,help,options,test,trivia,where")
+        SlashCmdList["CHRONICLE"] == slashFn and table.concat(Chronicle.Commands:GetCommands(), ",") == "codex,help,npc,options,test,trivia,where")
     local out = slash("help")
     check("19b. /chronicle help lista todos los comandos disponibles",
         out:find("/chronicle codex", 1, true) and out:find("/chronicle options", 1, true) and out:find("/chronicle trivia", 1, true)

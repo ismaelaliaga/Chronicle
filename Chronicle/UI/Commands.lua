@@ -14,6 +14,8 @@ Chronicle = Chronicle or {}
 --                             de Discovery de Trivia
 --   /chronicle test           muestra un aviso de ejemplo en el Popup
 --   /chronicle where          zona, subzona y posición del jugador según el servicio MapPosition
+--   /chronicle npc            la ÚLTIMA unidad que observó NpcDiscovery (evento, unidad, GUID crudo, npcID, nombre, resultado) y cuántos NPC hay habilitados. Sirve para
+--                             comprobar en el cliente real qué entrega WoW; no descubre nada. El ID canónico solo se muestra si la entidad está descubierta.
 --   Ninguno admite argumentos: con argumentos no se ejecuta y se explica el uso. Un comando desconocido lo contesta Slash («comando
 --   desconocido: x»). NO se registran /chronicle reset (Discovery no tiene reinicio: pospuesto) ni el conmutador de «avisos automáticos»
 --   (no tiene consumidor en la reconstrucción) ni codex2 (era del Codex antiguo).
@@ -36,6 +38,7 @@ local HELP = {
     { "/chronicle trivia", "muestra una curiosidad" },
     { "/chronicle test", "muestra un aviso de ejemplo" },
     { "/chronicle where", "tu zona, subzona y posición" },
+    { "/chronicle npc", "la última unidad observada para descubrir NPC" },
 }
 local TEST_TITLE = "Chronicle"
 local TEST_BODY = "Este es un aviso de ejemplo. Si lo ves con el estilo correcto, la interfaz de Chronicle funciona bien."
@@ -128,6 +131,28 @@ local function NewCommands(deps)
         end))
     end
 
+    local function Npc()
+        local service = Dep("npcDiscovery")
+        if not IsObject(service) or type(service.GetLast) ~= "function" or type(service.IsReady) ~= "function" or service:IsReady() ~= true then
+            Print("npc: el descubrimiento de NPC no está disponible.")
+            return
+        end
+        local okT, targets = pcall(service.GetTargets, service)
+        Print("NPC habilitados para descubrir: " .. ((okT and type(targets) == "table") and #targets or "?"))
+        local okL, last = pcall(service.GetLast, service)
+        if not okL or type(last) ~= "table" then
+            Print("Aún no se ha observado ninguna unidad (ponla como objetivo, pasa el ratón por encima o habla con ella).")
+            return
+        end
+        local known = last.status == "discovered" or last.status == "already"
+        Print("Última unidad: evento=" .. tostring(last.event) .. " unidad=" .. tostring(last.unit) .. " resultado=" .. tostring(last.status)
+            .. (last.reason and (" (" .. tostring(last.reason) .. ")") or ""))
+        Print("GUID=" .. tostring(last.guid) .. " npcID=" .. tostring(last.npcID) .. " nombre=" .. tostring(last.name) .. " comprobación del nombre=" .. tostring(last.nameCheck))
+        if known then
+            Print("Entidad: " .. tostring(last.id))
+        end
+    end
+
     local function Help()
         Print("comandos disponibles:")
         for _, line in ipairs(HELP) do
@@ -193,8 +218,8 @@ local function NewCommands(deps)
         end
     end
 
-    local HANDLERS = { help = Help, codex = Codex, options = Options, trivia = Trivia, test = Test, where = Where }
-    local NAMES = { "codex", "help", "options", "test", "trivia", "where" }
+    local HANDLERS = { help = Help, codex = Codex, options = Options, trivia = Trivia, test = Test, where = Where, npc = Npc }
+    local NAMES = { "codex", "help", "npc", "options", "test", "trivia", "where" }
 
     function self:GetCommands()
         local list = {}
@@ -236,6 +261,7 @@ Chronicle.Commands = NewCommands({
     mapPosition = function() return Chronicle.MapPosition end,
     resolver = function() return Chronicle.Resolver end,
     discovery = function() return Chronicle.Discovery end,
+    npcDiscovery = function() return Chronicle.NpcDiscovery end,
     print = function(message) Chronicle.Utils.Print(message) end,
 })
 Chronicle.Commands.New = NewCommands

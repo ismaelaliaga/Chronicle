@@ -23,6 +23,7 @@ Data/Registry.lua
 Data/Entities/Geography.lua
 Data/Entities/Subzones.lua
 Data/Entities/Npcs.lua
+Data/NpcTargets.lua
 Data/Trivia.lua
 Localization/Localization.lua
 Services/Resolver.lua
@@ -30,6 +31,7 @@ Services/Discovery.lua
 Services/MapPosition.lua
 Services/Proximity.lua
 Services/ZoneDiscovery.lua
+Services/NpcDiscovery.lua
 Services/Trivia.lua
 UI/Theme.lua
 UI/Popup.lua
