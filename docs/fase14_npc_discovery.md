@@ -52,3 +52,10 @@ Defectos encontrados y corregidos, cada uno con su prueba de regresión:
 Pruebas añadidas sin defecto asociado: `E1` (un evento que el cliente rechaza registrar no impide los demás), `E2` (un fallo del módulo no impide Codex, descubrimiento de lugares ni avisos), `E3` (placa de nombre + objetivo = un solo descubrimiento y un solo aviso), `C5b`.
 
 Evidencia sobre el GUID: la Warcraft Wiki ([GUID](https://warcraft.wiki.gg/wiki/GUID), [UnitGUID](https://warcraft.wiki.gg/wiki/API_UnitGUID)) documenta `Creature-0-serverID-instanceID-zoneUID-npcID-spawnUID` con el npcID en la sexta posición y ejemplos de addons de Classic que lo usan. **Sigue sin verificarse en el cliente 1.15.7**; el parser conserva su comportamiento seguro (formato distinto = no descubre nada) y `/chronicle npc` enseña el GUID crudo para comprobarlo.
+
+## 7. Resultado de las pruebas manuales en WoW Classic Era (comunicado por el supervisor)
+- **Formato del GUID verificado en el cliente real** con la salida de `/chronicle npc`: `Creature-0-5250-0-82-705-00004152E0` y `Creature-0-5250-0-82-1354-00003C6363` (7 campos, npcID en la sexta posición).
+- **Eventos observados en el cliente:** `UPDATE_MOUSEOVER_UNIT` (`mouseover`) y `NAME_PLATE_UNIT_ADDED` (`nameplate2`) llegan con GUID. Las unidades 705 y 1354 salieron `not_enabled`: un NPC no habilitado no se descubre.
+- **Descubrimiento de Grelin Whitebeard y Sten Stoutarm:** por ratón y por objetivo (el supervisor confirma que ambas vías desbloquean la entrada). Sus `npcID` (786 y 658) quedan **verificados en el cliente**: la confianza en `NpcTargets.lua` pasa a `client_verified`. No se ha aislado estrictamente cada vía con placas de nombre desactivadas, ni se ha probado `GOSSIP_SHOW` con la unidad `npc`.
+- **Alias nuevo por observación real:** `/chronicle where` en Coldridge Valley mostró `Subzona: Valle de Crestanevada` sin máscara (el Resolver no la conocía), así que la subzona no se descubría. Se añade el alias `Valle de Crestanevada` → `subzone:coldridge_valley` ([C]).
+- Sin verificar: descubrimiento por conversación (`GOSSIP_SHOW`), aislamiento de cada vía con placas desactivadas, y cualquier NPC distinto de estos dos.

@@ -82,8 +82,12 @@ local ALIASES = {
 }
 local aliasCount = 0
 for _ in pairs(ALIASES) do aliasCount = aliasCount + 1 end
-check("la fuente tenía 22 alias (2 de zona + 20 de subzona); aquí se esperan 22 entradas y hay 23 registradas (22 de la fuente + 1 observado en el cliente real)",
-    aliasCount == 22 and Resolver:CountAliases() == 23)
+check("la fuente tenía 22 alias (2 de zona + 20 de subzona); aquí se esperan 22 entradas y hay 24 registradas (22 de la fuente + 2 observados en el cliente real)",
+    aliasCount == 22 and Resolver:CountAliases() == 24)
+check("alias observado en el cliente real: 'Valle de Crestanevada' resuelve a la subzona Coldridge Valley (y solo como subzona)",
+    Resolver:Resolve("Valle de Crestanevada") == "subzone:coldridge_valley" and Resolver:Resolve("Valle de Crestanevada", { type = "subzone" }) == "subzone:coldridge_valley"
+        and select(2, Resolver:Resolve("Valle de Crestanevada", { type = "zone" })) == "not_found"
+        and Resolver:Resolve("Desfiladero de Crestanevada") == "subzone:coldridge_pass")
 check("alias observado en el cliente real (WoW Classic Era esES): 'Destilería Thunderbrew' resuelve a la subzona y como subzona",
     Resolver:Resolve("Destilería Thunderbrew") == "subzone:thunderbrew_distillery"
         and Resolver:Resolve("Destilería Thunderbrew", { type = "subzone" }) == "subzone:thunderbrew_distillery"
@@ -457,7 +461,7 @@ local rb1 = Chronicle.Resolver:Rebuild()
 check("con los datos reales: Rebuild devuelve true, IsReady() es true y las resoluciones siguen siendo las mismas",
     rb1 == true and Chronicle.Resolver:IsReady() == true and Chronicle.Resolver:Resolve("Forjaz") == "city:ironforge"
         and Chronicle.Resolver:Resolve("El Trono") == "subzone:the_great_forge"
-        and Chronicle.Resolver:Resolve("Ironforge") == "city:ironforge" and Chronicle.Resolver:CountAliases() == 23)
+        and Chronicle.Resolver:Resolve("Ironforge") == "city:ironforge" and Chronicle.Resolver:CountAliases() == 24)
 check("ambigüedad y normalización no cambian tras reconstruir (instancia con nombre compartido)",
     (function()
         local _, l, r = NewWorld()
@@ -494,7 +498,7 @@ check("arranque normal restablecido: todo listo y se anuncia exactamente una vez
     Chronicle.Init.ready == true and announced == 1 and Chronicle.Resolver:Resolve("Forjaz") == "city:ironforge")
 
 -- El fichero de alias tiene los 22 de la fuente + 1 observado en el cliente real
-check("el fichero de alias contiene exactamente 23 llamadas a AddAlias (22 de la fuente + 1 del cliente real), todas en esES",
+check("el fichero de alias contiene exactamente 24 llamadas a AddAlias (22 de la fuente + 2 del cliente real), todas en esES",
     (function()
         local n = 0
         for _, file in ipairs(ADDON_FILES) do
@@ -507,5 +511,5 @@ check("el fichero de alias contiene exactamente 23 llamadas a AddAlias (22 de la
                 end
             end
         end
-        return n == 23
+        return n == 24
     end)())

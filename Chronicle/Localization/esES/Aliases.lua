@@ -1,7 +1,7 @@
 Chronicle = Chronicle or {}
 
 -- Alias en español (esES) de nombres de entidades ya migradas. Origen: Core/Localization.lua
--- del addon original (tablas ZONE_ALIASES y SUBZONE_ALIASES), más UN alias observado después en el
+-- del addon original (tablas ZONE_ALIASES y SUBZONE_ALIASES), más DOS alias observados después en el
 -- cliente real (marcado [C], con su fecha y origen en su propio comentario). Cada alias apunta al ID de la entidad que en la fuente era el nombre
 -- inglés al que traducía. Los 22 alias de la fuente corresponden a entidades migradas, así que
 -- no queda ninguno fuera de alcance.
@@ -31,6 +31,8 @@ Resolver:AddAlias("esES", "subzone:coldridge_pass", "Desfiladero de Crestanevada
 Resolver:AddAlias("esES", "subzone:thunderbrew_distillery", "Destilería Cebatruenos") -- [W]
 -- Añadido tras la prueba en WoW Classic Era 1.15.7 (esES): GetSubZoneText() devolvió "Destilería Thunderbrew" (23 bytes) dentro de la destilería de Kharanos [C].
 Resolver:AddAlias("esES", "subzone:thunderbrew_distillery", "Destilería Thunderbrew") -- [C]
+-- Añadido tras la prueba en WoW Classic Era (esES): `/chronicle where` en Coldridge Valley mostró Subzona: "Valle de Crestanevada" sin máscara (el Resolver no la conocía) [C].
+Resolver:AddAlias("esES", "subzone:coldridge_valley", "Valle de Crestanevada") -- [C]
 Resolver:AddAlias("esES", "subzone:steelgrills_depot", "Almacén de Brasacerada") -- [W]
 Resolver:AddAlias("esES", "subzone:amberstill_ranch", "Granja de Semperámbar") -- [W]
 Resolver:AddAlias("esES", "subzone:frostmane_hold", "Refugio Peloescarcha") -- [W]

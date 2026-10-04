@@ -17,11 +17,11 @@ Chronicle = Chronicle or {}
 
 Chronicle.NpcTargets = {
     {
-        id = "npc:grelin_whitebeard", npcID = 786, confidence = "source_confirmed",
-        sources = { "addon original (Wowhead Classic)", "Warcraft Wiki: Grelin Whitebeard (NPC ID 786, Coldridge Valley)" },
+        id = "npc:grelin_whitebeard", npcID = 786, confidence = "client_verified",
+        sources = { "addon original (Wowhead Classic)", "Warcraft Wiki: Grelin Whitebeard (NPC ID 786, Coldridge Valley)", "prueba manual en WoW Classic Era (ratón y objetivo lo descubrieron por GUID)" },
     },
     {
-        id = "npc:sten_stoutarm", npcID = 658, confidence = "source_confirmed",
-        sources = { "addon original (Wowhead Classic)", "Warcraft Wiki: Sten Stoutarm (NPC ID 658, Coldridge Valley)" },
+        id = "npc:sten_stoutarm", npcID = 658, confidence = "client_verified",
+        sources = { "addon original (Wowhead Classic)", "Warcraft Wiki: Sten Stoutarm (NPC ID 658, Coldridge Valley)", "prueba manual en WoW Classic Era (ratón y objetivo lo descubrieron por GUID)" },
     },
 }

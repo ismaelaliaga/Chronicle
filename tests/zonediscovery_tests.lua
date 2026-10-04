@@ -188,7 +188,7 @@ do
         r.subzone.status == "discovered" and r.subzone.id == "subzone:kharanos" and r.zone.status == "unavailable"
             and Chronicle.Discovery:IsDiscovered("subzone:kharanos") and #calls == 1)
     for _, case in ipairs({
-        { "Destilería Cebatruenos", "subzone:thunderbrew_distillery" }, { "Destilería Thunderbrew", "subzone:thunderbrew_distillery" },
+        { "Destilería Cebatruenos", "subzone:thunderbrew_distillery" }, { "Destilería Thunderbrew", "subzone:thunderbrew_distillery" }, { "Valle de Crestanevada", "subzone:coldridge_valley" },
         { "El Trono", "subzone:the_great_forge" },
         { "Ciudad Manitas", "subzone:tinker_town" }, { "Gol'Bolar Quarry", "subzone:golbolar_quarry" },
         { "THELSAMAR", "subzone:thelsamar" },
@@ -432,8 +432,8 @@ do
 end
 
 -- ===================== Resolver y datos intactos =====================
-check("no se han añadido más alias, entidades ni textos: 23 alias (22 de la fuente + 1 del cliente real), 53 entidades, 53 textos esES",
-    Chronicle.Resolver:CountAliases() == 23 and Chronicle.Registry:Count() == 53 and #Chronicle.Localization:GetIds("esES") == 53)
+check("no se han añadido más alias, entidades ni textos: 24 alias (22 de la fuente + 2 del cliente real), 53 entidades, 53 textos esES",
+    Chronicle.Resolver:CountAliases() == 24 and Chronicle.Registry:Count() == 53 and #Chronicle.Localization:GetIds("esES") == 53)
 
 -- ===================== Alcance y fronteras =====================
 local function codeOf(name)
