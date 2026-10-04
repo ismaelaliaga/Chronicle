@@ -146,6 +146,14 @@ function CheckButtonMethods:GetChecked() return self.checked == true end
 
 function FrameMethods:RegisterForClicks(...) self.clicks = { ... } end
 function FrameMethods:SetFrameLevel(level) self.level = level end
+-- Como el cliente: sin nivel explícito, un frame nace un nivel por encima de su padre (los hermanos quedan en el MISMO nivel).
+-- El mock NO simula qué frame recibe un clic cuando se solapan: solo expone los niveles para poder comprobarlos.
+function FrameMethods:GetFrameLevel()
+    if self.level then return self.level end
+    local parent = self.parent
+    if type(parent) == "table" and parent.GetFrameLevel then return parent:GetFrameLevel() + 1 end
+    return 1
+end
 function FrameMethods:GetCenter() return self.center and self.center[1], self.center and self.center[2] end
 function FrameMethods:GetEffectiveScale() return self.scale or 1 end
 -- Botones: Click() ejecuta el OnClick del botón, como un clic del usuario.

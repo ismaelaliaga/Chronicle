@@ -53,8 +53,11 @@ local function NewNavigation(deps)
         if not ok then error("Theme:ApplyText(BODY) falló: " .. tostring(reason), 0) end
         row.select:SetScript("OnClick", function() model:Select(row.id) end)
 
-        -- Se crea DESPUÉS del botón de selección: queda por encima de él y recibe sus propios clics.
+        -- El botón de selección ocupa TODA la fila, así que el +/- se solapa con él. Crearlo después NO basta: dos hermanos del mismo
+        -- nivel no tienen un orden garantizado para recibir el clic, y si gana el de selección el «+» no hace nada. Por eso el nivel
+        -- del +/- se fija de forma explícita por encima del de selección.
         row.toggle = createFrame("Button", nil, child)
+        row.toggle:SetFrameLevel(row.select:GetFrameLevel() + 2)
         row.toggle:SetSize(theme:GetLayout("CODEX_TOGGLE_WIDTH"), rowHeight)
         row.symbol = row.toggle:CreateFontString(nil, "ARTWORK", "GameFontNormal")
         row.symbol:SetPoint("CENTER", row.toggle, "CENTER", 0, 0)
