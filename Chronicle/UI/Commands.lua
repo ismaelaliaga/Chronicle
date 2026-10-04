@@ -145,8 +145,10 @@ local function NewCommands(deps)
             return
         end
         local known = last.status == "discovered" or last.status == "already"
+        -- El motivo solo se muestra cuando NO puede contener IDs canónicos: en «name_mismatch» y «ambiguous_entity» es la lista de entidades.
+        local SAFE_REASON = { failed = true, not_ready = true, invalid_guid = true, not_creature = true }
         Print("Última unidad: evento=" .. tostring(last.event) .. " unidad=" .. tostring(last.unit) .. " resultado=" .. tostring(last.status)
-            .. (last.reason and (" (" .. tostring(last.reason) .. ")") or ""))
+            .. ((last.reason and SAFE_REASON[last.status]) and (" (" .. tostring(last.reason) .. ")") or ""))
         Print("GUID=" .. tostring(last.guid) .. " npcID=" .. tostring(last.npcID) .. " nombre=" .. tostring(last.name) .. " comprobación del nombre=" .. tostring(last.nameCheck))
         if known then
             Print("Entidad: " .. tostring(last.id))

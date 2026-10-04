@@ -177,6 +177,77 @@ check("C4. consultar no descubre nada y no admite argumentos", (function()
     return slash("npc extra"):find("no admite argumentos", 1, true) ~= nil and Chronicle.Discovery:Count() == before
 end)())
 
+-- ===================== Revisión técnica: defectos y casos pedidos =====================
+Boot()
+setUnit("target", GRELIN, "Sten Stoutarm") -- el nombre resuelve a OTRA entidad (aún no descubierta)
+FireEvent("PLAYER_TARGET_CHANGED")
+local leak = slash("npc")
+check("C5. /chronicle npc NO revela el ID canónico de una entidad no descubierta ni siquiera en el motivo de un rechazo (name_mismatch)",
+    leak:find("resultado=name_mismatch", 1, true) and not leak:find("npc:", 1, true) and not leak:find("sten_stoutarm", 1, true) and not leak:find("grelin_whitebeard", 1, true))
+Boot(function() Chronicle.Registry:Register({ id = "npc:clon", type = "npc", located_in = "subzone:coldridge_valley", npcID = 658 }) end)
+setUnit("target", STEN, "Sten Stoutarm")
+FireEvent("PLAYER_TARGET_CHANGED")
+local amb = slash("npc")
+check("C5b. tampoco en una coincidencia ambigua (ambiguous_entity) se imprimen IDs canónicos", amb:find("npc:", 1, true) == nil and amb:find("clon", 1, true) == nil)
+
+Boot()
+setUnit("target", GRELIN, "Grelin Whitebeard")
+FireEvent("PLAYER_TARGET_CHANGED")
+setUnit("target", nil)
+FireEvent("PLAYER_TARGET_CHANGED") -- soltar el objetivo
+setUnit("mouseover", nil)
+FireEvent("UPDATE_MOUSEOVER_UNIT") -- el ratón deja de estar sobre una unidad
+local kept = slash("npc")
+check("C6. soltar el objetivo o mover el ratón (eventos SIN unidad) no borra la última observación útil: /chronicle npc sigue mostrando el GUID del NPC",
+    N():GetLast().guid == GRELIN and kept:find(GRELIN, 1, true) ~= nil and kept:find("resultado=discovered", 1, true) ~= nil and (N():GetStats().ignored_unit or 0) >= 2)
+
+-- Un evento que el cliente no conoce no impide que funcionen los demás
+do
+    local realCreateFrame = CreateFrame
+    Boot(function()
+        CreateFrame = function(kind, name, parent, template)
+            local frame = realCreateFrame(kind, name, parent, template)
+            local realRegister = frame.RegisterEvent
+            frame.RegisterEvent = function(self, eventName)
+                if eventName == "NAME_PLATE_UNIT_ADDED" then error("evento desconocido en este cliente") end
+                return realRegister(self, eventName)
+            end
+            return frame
+        end
+    end)
+    CreateFrame = realCreateFrame
+    local reported = false
+    for _, msg in ipairs(ReportedErrors) do if msg:find("NAME_PLATE_UNIT_ADDED", 1, true) then reported = true end end
+    setUnit("target", GRELIN, "Grelin Whitebeard")
+    FireEvent("PLAYER_TARGET_CHANGED")
+    setUnit("mouseover", STEN, "Sten Stoutarm")
+    FireEvent("UPDATE_MOUSEOVER_UNIT")
+    check("E1. si el cliente rechaza registrar UN evento (aquí las placas de nombre) el fallo se comunica y objetivo y ratón siguen descubriendo; el servicio queda listo",
+        reported and N():IsReady() and Chronicle.Init.failed.NpcDiscovery == nil and Chronicle.Discovery:IsDiscovered("npc:grelin_whitebeard") and Chronicle.Discovery:IsDiscovered("npc:sten_stoutarm"))
+end
+
+-- Un fallo de este módulo opcional no impide el Codex ni el descubrimiento de lugares
+Boot(function()
+    Chronicle.NpcDiscovery.Init = function() error("npc roto") end
+    function GetRealZoneText() return "Dun Morogh" end
+    function GetSubZoneText() return "Kharanos" end
+    C_Map = { GetBestMapForUnit = function() return 1426 end, GetPlayerMapPosition = function() return { GetXY = function() return 0.5, 0.25 end } end }
+end)
+local placeResult = Chronicle.ZoneDiscovery:Check()
+check("E2. si NpcDiscovery falla al iniciar queda en Init.failed y NO impide arrancar el Codex, ni descubrir lugares, ni el aviso de descubrimiento",
+    Chronicle.Init.failed.NpcDiscovery ~= nil and Chronicle.Codex:IsReady() and placeResult.zone.status == "discovered" and placeResult.subzone.status == "discovered"
+        and Chronicle.Popup:IsVisible() == true and Chronicle.Init.ready == true)
+GetRealZoneText, GetSubZoneText, C_Map = nil, nil, nil
+
+-- Un NPC se descubre por GUID aunque el mismo NPC aparezca con distintas unidades
+Boot()
+setUnit("nameplate1", GRELIN, "Grelin Whitebeard")
+FireEvent("NAME_PLATE_UNIT_ADDED", "nameplate1")
+setUnit("target", GRELIN, "Grelin Whitebeard")
+FireEvent("PLAYER_TARGET_CHANGED")
+check("E3. el mismo NPC visto por placa de nombre y luego como objetivo produce UN solo descubrimiento y UN solo aviso",
+    Chronicle.Discovery:Count("npc") == 1 and Chronicle.DiscoveryNotice:GetStats().requested == 1 and N():GetLast().status == "already")
+
 -- ===================== Estructura =====================
 check("S1. el servicio no referencia la SavedVariable ni toca Popup/State, y el .toc carga datos antes que el servicio", (function()
     for _, file in ipairs(ADDON_FILES) do

@@ -115,7 +115,11 @@ local function NewNpcDiscovery(deps)
 
     local function Finish(result)
         stats[result.status] = (stats[result.status] or 0) + 1
-        last = result
+        -- Las observaciones SIN unidad (soltar el objetivo, quitar el ratón de encima) se cuentan pero no borran la última observación útil:
+        -- es lo que /chronicle npc enseña para diagnosticar el cliente.
+        if result.status ~= "ignored_unit" then
+            last = result
+        end
         return Copy(result)
     end
 

@@ -44,3 +44,11 @@ Conclusión: no existe una vía estructurada, abierta y verificada que permita i
 4. Haz lo mismo con **Sten Stoutarm**, esta vez solo pasando el ratón por encima (sin objetivo).
 5. Vuelve a ponerlos como objetivo: no debe salir ningún aviso nuevo. Pon como objetivo a un jugador o a otro NPC: no debe descubrirse nada.
 6. Si algo falla, `/chronicle npc` y el texto de cualquier error Lua dicen en qué paso se corta.
+
+## 6. Revisión técnica (commit posterior a `d73ca53`)
+Defectos encontrados y corregidos, cada uno con su prueba de regresión:
+- **`/chronicle npc` podía revelar un ID canónico** no descubierto en el motivo de un rechazo `name_mismatch` (el motivo era el ID de la otra entidad). Ahora el motivo solo se imprime en estados que no pueden contener IDs (`failed`, `not_ready`, `invalid_guid`, `not_creature`). Prueba `C5`.
+- **Las observaciones sin unidad borraban la última observación útil** (soltar el objetivo o quitar el ratón de encima dispara los mismos eventos sin unidad), así que `/chronicle npc` dejaba de mostrar el GUID justo cuando había que consultarlo. Ahora se cuentan (`GetStats().ignored_unit`) pero no sobrescriben `GetLast()`. Prueba `C6`.
+Pruebas añadidas sin defecto asociado: `E1` (un evento que el cliente rechaza registrar no impide los demás), `E2` (un fallo del módulo no impide Codex, descubrimiento de lugares ni avisos), `E3` (placa de nombre + objetivo = un solo descubrimiento y un solo aviso), `C5b`.
+
+Evidencia sobre el GUID: la Warcraft Wiki ([GUID](https://warcraft.wiki.gg/wiki/GUID), [UnitGUID](https://warcraft.wiki.gg/wiki/API_UnitGUID)) documenta `Creature-0-serverID-instanceID-zoneUID-npcID-spawnUID` con el npcID en la sexta posición y ejemplos de addons de Classic que lo usan. **Sigue sin verificarse en el cliente 1.15.7**; el parser conserva su comportamiento seguro (formato distinto = no descubre nada) y `/chronicle npc` enseña el GUID crudo para comprobarlo.
