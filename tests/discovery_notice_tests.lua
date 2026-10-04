@@ -156,4 +156,22 @@ check("N9. descubrir NO escribe nada más que el propio descubrimiento y el mód
     end
     return true
 end)())
+check("N10. un evento REPETIDO por la misma entidad (aunque Discovery no lo emitiría) no duplica el aviso: un descubrimiento = un aviso", (function()
+    Boot(function() names(nil, nil) end)
+    Chronicle.Discovery:Discover("zone:dun_morogh")
+    Chronicle.Events:Emit("Chronicle.Discovery.Discovered", "zone:dun_morogh")
+    Chronicle.Events:Emit("Chronicle.Discovery.Discovered", "zone:dun_morogh")
+    local st = Chronicle.DiscoveryNotice:GetStats()
+    return Chronicle.Popup:IsVisible() == true and Chronicle.Popup:GetQueueSize() == 0 and st.requested == 1 and st.skipped.duplicate == 2
+end)())
+check("N10b. un aviso RECHAZADO por el Popup no se da por hecho: si el mismo evento llega otra vez y el Popup ya acepta, el aviso sale", (function()
+    Boot(function() names(nil, nil) end)
+    local realEnqueue = Chronicle.Popup.Enqueue
+    Chronicle.Popup.Enqueue = function() return false, "ui_error" end
+    Chronicle.Discovery:Discover("zone:dun_morogh")
+    Chronicle.Popup.Enqueue = realEnqueue
+    Chronicle.Events:Emit("Chronicle.Discovery.Discovered", "zone:dun_morogh")
+    local st = Chronicle.DiscoveryNotice:GetStats()
+    return st.failed.ui_error == 1 and st.shown == 1 and Chronicle.Popup:IsVisible() == true
+end)())
 reset()

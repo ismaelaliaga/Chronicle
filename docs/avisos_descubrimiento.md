@@ -1,6 +1,6 @@
 # Avisos de descubrimiento (rama `correccion-avisos-descubrimiento`)
 
-Base: `1bf73990731439f84759ef605c253ce857473876` (candidata + alias Thunderbrew + corrección del árbol del Codex + traza temporal del árbol). **No probado en WoW Classic Era.**
+Base: `1bf73990731439f84759ef605c253ce857473876` (candidata + alias Thunderbrew + corrección del árbol del Codex + traza temporal del árbol). **Los avisos de LUGARES se han probado manualmente en WoW Classic Era (según lo comunicado por el supervisor) y funcionan.** El descubrimiento de **NPC sigue PENDIENTE** (ver más abajo) y no se ha probado nada relacionado con NPC.
 
 ## Recorrido de extremo a extremo (código actual)
 1. **Evento del cliente** (`PLAYER_ENTERING_WORLD`, `ZONE_CHANGED_NEW_AREA`, `ZONE_CHANGED`, `ZONE_CHANGED_INDOORS`) → frame de `ZoneDiscovery`.
@@ -18,6 +18,7 @@ Falta de conexión: no había ningún módulo que escuchara `Chronicle.Discovery
 `UI/DiscoveryNotice.lua` (módulo opcional, inicializado tras Discovery): se suscribe una vez al evento y, por cada descubrimiento **nuevo**, hace `Popup:Enqueue({ title = nombre, body = descripción })` con los textos localizados de la entidad.
 - Solo avisa si `Discovery:IsDiscovered(id)` lo confirma; sin nombre ni descripción no avisa (nunca muestra el ID).
 - Un error o rechazo del Popup no afecta a Discovery y **no es silencioso**: se cuenta en `GetStats().failed[motivo]` y se comunica una vez por motivo.
+- Un evento repetido por la misma entidad no duplica el aviso (`skipped.duplicate`); un aviso rechazado por el Popup no se da por hecho y puede reintentarse.
 - Sin temporizadores, sin frames, sin SavedVariables, sin opciones nuevas.
 - Descubrir zona y subzona a la vez deja dos avisos: el primero visible y el segundo en la cola del Popup.
 

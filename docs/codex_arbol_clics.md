@@ -12,14 +12,5 @@ Cada fila tiene dos botones hermanos del mismo padre (`child`): el de **selecci�
 
 **Corrección** (`UI/CodexNavigation.lua`): `row.toggle:SetFrameLevel(row.select:GetFrameLevel() + 2)`. Las pruebas T2 y T3e fallaban en la candidata (mismo nivel) y pasan ahora.
 
-## Traza temporal (commit aparte, retirable)
-`UI/CodexTrace.lua` + 2 llamadas `Trace(...)` en `CodexNavigation.lua` + una línea en `Init.lua` y otra en el `.toc`. **Apagada por defecto**; máximo 40 líneas; sin temporizadores.
-
-```
-/chronicle debug codex on
-(pulsa el «+» de la fila)
-/chronicle debug codex off
-```
-- `[clic] +/- id=continent:eastern_kingdoms ... Toggle -> true, true | filas visibles ahora=N`: el botón +/- recibió el clic y el modelo expandió. Si aun así no se ve nada, el fallo está en el repintado.
-- `[clic] SELECCIÓN id=... | ratón sobre el +/-: true`: el botón de selección se llevó el clic que iba al «+» (confirma la causa).
-- Ninguna línea: ningún botón de la fila recibió el clic (otro frame lo cubre, o el botón está deshabilitado).
+## Estado
+La corrección (nivel explícito del +/-) se probó después manualmente en WoW Classic Era: según lo comunicado por el supervisor, el Codex se abre, el árbol se expande y se ven las entradas descubiertas. La traza temporal `/chronicle debug codex` que se usó para ese diagnóstico **se retiró** de la candidata limpia (sigue en la historia de la rama `correccion-avisos-descubrimiento`).

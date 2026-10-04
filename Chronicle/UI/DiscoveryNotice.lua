@@ -16,7 +16,7 @@ Chronicle = Chronicle or {}
 -- API: DiscoveryNotice:Init() (idempotente; se suscribe una sola vez)  :IsReady()
 --      DiscoveryNotice:GetStats() -> { requested = n, queued = n, shown = n, skipped = { motivo = n }, failed = { motivo = n } } (copia)
 --        requested: avisos pedidos al Popup. shown/queued: lo que respondió el Popup ("shown"/"queued"). skipped: no se pidió ("invalid_id",
---        "not_discovered", "no_content"). failed: el Popup no lo aceptó o falló ("not_ready", "queue_full", "ui_error", "popup_error"...).
+--        "not_discovered", "no_content", "duplicate"). failed: el Popup no lo aceptó o falló ("not_ready", "queue_full", "ui_error", "popup_error"...).
 --      DiscoveryNotice.New({ events, discovery, localization, popup }) crea otra instancia (pruebas); cada dependencia es el objeto o una función que lo devuelve.
 
 local function IsObject(value)
@@ -47,6 +47,7 @@ local function NewNotice(deps)
     local initDone = false
     local stats = { requested = 0, queued = 0, shown = 0, skipped = {}, failed = {} }
     local reported = {}
+    local noticed = {} -- IDs cuyo aviso aceptó el Popup en esta sesión: un evento repetido no los avisa dos veces
 
     local function Count(bucket, reason)
         bucket[reason] = (bucket[reason] or 0) + 1
@@ -78,6 +79,10 @@ local function NewNotice(deps)
             Count(stats.skipped, "invalid_id")
             return
         end
+        if noticed[id] then
+            Count(stats.skipped, "duplicate") -- Discovery solo emite en la primera vez; esto protege de un evento repetido
+            return
+        end
         local discovery = Dep("discovery")
         local okD, discovered = false, false
         if IsObject(discovery) and type(discovery.IsDiscovered) == "function" then
@@ -105,10 +110,13 @@ local function NewNotice(deps)
             Fail("popup_error", accepted)
         elseif accepted ~= true then
             Fail(type(how) == "string" and how or "ui_error", how)
-        elseif how == "shown" then
-            stats.shown = stats.shown + 1
         else
-            stats.queued = stats.queued + 1
+            noticed[id] = true -- solo si el Popup lo aceptó: un aviso rechazado puede reintentarse
+            if how == "shown" then
+                stats.shown = stats.shown + 1
+            else
+                stats.queued = stats.queued + 1
+            end
         end
     end
 
