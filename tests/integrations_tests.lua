@@ -264,6 +264,7 @@ do
     Chronicle.Discovery.Discover = function(self, ...) discovers = discovers + 1; return realDiscover(self, ...) end
     Chronicle.Discovery:Discover("subzone:coldridge_valley")
     discovers = 0
+    Chronicle.Popup:CloseAll() -- el descubrimiento de arriba ya mostró su propio aviso; la curiosidad se comprueba sola
     local ok2 = trivia:Show(true)
     check("9b. al descubrir el único lugar que nombra la primera curiosidad, sale esa y solo esa, con su texto literal",
         ok2 == true and Chronicle.Popup:IsVisible() and Chronicle.Popup:GetContent().body == LegacyTrivia[1])
@@ -777,6 +778,7 @@ do
     local out = slash("trivia")
     check("20d. /chronicle trivia sin nada descubierto lo explica y no muestra nada", out:find("no hay ninguna curiosidad que puedas ver", 1, true) ~= nil and not Chronicle.Popup:IsVisible())
     Chronicle.Discovery:Discover("subzone:coldridge_valley")
+    Chronicle.Popup:CloseAll() -- (ver 9b: se descarta el aviso del propio descubrimiento)
     slash("trivia")
     check("20e. con el lugar descubierto /chronicle trivia muestra la curiosidad", Chronicle.Popup:IsVisible() and Chronicle.Popup:GetContent().body == LegacyTrivia[1])
     Chronicle.Popup:CloseAll()

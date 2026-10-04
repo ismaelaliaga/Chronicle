@@ -528,6 +528,7 @@ end
 -- ===================== INTERFAZ: actualización en vivo con el Discovery real =====================
 local eventRegistrations = 0
 Boot(function()
+    Chronicle.DiscoveryNotice.Init = function() end -- (el aviso de descubrimiento registra su propio oyente: aquí se cuentan solo los del Codex)
     local events = Chronicle.Events
     local original = events.Register
     events.Register = function(self, name, callback)
@@ -1009,6 +1010,7 @@ do
     local registrations = 0
     Boot(function()
         Chronicle.Discovery.IsReady = function() error("IsReady roto en el arranque") end
+        Chronicle.DiscoveryNotice.Init = function() end -- (ver arriba)
         local events = Chronicle.Events
         local original = events.Register
         events.Register = function(self, name, callback)

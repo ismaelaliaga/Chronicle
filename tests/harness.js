@@ -53,6 +53,7 @@ const TEST_FILES = [
     "codex_tests.lua",
     "codex_nav_tests.lua",
     "codex_tree_tests.lua",
+    "discovery_notice_tests.lua",
     "codex_discovery_tests.lua",
     "codex_content_tests.lua",
     "integrations_tests.lua",

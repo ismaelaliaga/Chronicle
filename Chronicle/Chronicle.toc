@@ -39,6 +39,7 @@ UI/CodexNavigation.lua
 UI/CodexNpcModel.lua
 UI/CodexPage.lua
 UI/Codex.lua
+UI/DiscoveryNotice.lua
 UI/OptionsPanel.lua
 UI/MinimapButton.lua
 UI/Commands.lua

@@ -57,6 +57,8 @@ local MODULES = {
     -- Codex: ventana principal con navegación y páginas (Fases 8-9). Opcional por la misma razón que el Popup. Depende de Theme y,
     -- ahora que muestra el catálogo, de Registry y Localization (requeridos: si fallan, el Codex ni se intenta).
     { name = "Codex", required = false, requires = { "Theme", "Registry", "Localization" } },
+    -- Avisos de descubrimiento: une el evento de Discovery con el Popup. Opcional: si falla, Discovery y el Codex siguen funcionando.
+    { name = "DiscoveryNotice", required = false, requires = { "Discovery" } },
     -- Fase 12: integraciones OPCIONALES. Ninguna es requerida: si falla, queda en Init.failed y el resto (Discovery, Codex, Popup...) funciona.
     -- `requires` solo nombra lo que el módulo NO puede usar sin esa pieza; el resto de dependencias (Popup, Codex...) se comprueba al usarlas.
     { name = "Options", required = false, requires = { "State" } }, -- preferencias, guardadas con State
