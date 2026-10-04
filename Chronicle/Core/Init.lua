@@ -66,6 +66,7 @@ local MODULES = {
     { name = "MinimapButton", required = false, requires = { "Theme" } }, -- sin Options usa la posición predeterminada y no la guarda
     { name = "Slash", required = false }, -- solo el comando /chronicle: el Core funciona sin él
     { name = "Commands", required = false, requires = { "Slash" } }, -- los subcomandos de /chronicle (Fase 12)
+    { name = "CodexTrace", required = false, requires = { "Slash" } }, -- TEMPORAL: traza de clics del árbol del Codex (rama correccion-codex-arbol)
 }
 
 Init.initialized = false -- ya se ha hecho el (único) intento de arranque

@@ -173,4 +173,40 @@ check("T9. expandir o contraer no cambia la selección: tras contraer el contine
         return false
     end)())
 
+-- ===================== Traza temporal de clics (UI/CodexTrace.lua) =====================
+local function slash(text)
+    ChatLog = {}
+    SlashCmdList["CHRONICLE"](text)
+    return table.concat(ChatLog, "\n")
+end
+local function tracedClick(frame)
+    ChatLog = {}
+    click(frame)
+    return table.concat(ChatLog, "\n")
+end
+local baseline = deepEqual(ChronicleCharDB, ChronicleCharDB)
+check("TR0. la traza es un módulo opcional ya inicializado y está APAGADA por defecto: un clic no imprime nada",
+    Chronicle.CodexTrace:IsReady() and Chronicle.Init.failed.CodexTrace == nil and Chronicle.CodexTrace:IsEnabled() == false
+        and tracedClick(visibleRows()[1].toggle) == "" and tracedClick(visibleRows()[1].toggle) == "")
+slash("debug codex on")
+click(visibleRows()[1].toggle) -- el árbol está expandido (T9): se contrae sin traza útil para partir de «contraído»
+slash("debug codex on")
+local line = tracedClick(visibleRows()[1].toggle)
+check("TR1. activada, cada clic en el +/- deja UNA línea con el ID, el nivel, el estado anterior, el resultado de Toggle y las filas visibles",
+    line:find("[codex] [clic] +/- id=continent:eastern_kingdoms", 1, true) and line:find("expandido antes=false", 1, true)
+        and line:find("Toggle -> true, true", 1, true) and line:find("filas visibles ahora=%d+") ~= nil and #visibleRows() > 4 and select(2, line:gsub("\n", "\n")) == 0)
+check("TR2. un clic en el botón de selección deja su línea (ID, nivel y si el ratón estaba sobre el +/-) y sigue seleccionando",
+    tracedClick(visibleRows()[2].select):find("[clic] SELECCIÓN id=zone:dun_morogh", 1, true) ~= nil and visibleRows()[2].select.children[1].shown == true)
+slash("debug codex on")
+local lines = 0
+for _ = 1, 60 do
+    local out = tracedClick(visibleRows()[1].toggle)
+    for _ in out:gmatch("[^\n]+") do lines = lines + 1 end
+end
+check("TR3. la traza tiene un límite: 60 clics dejan como máximo 41 líneas (40 + el aviso, una sola vez)", lines <= 41)
+slash("debug codex off")
+check("TR4. desactivada vuelve a no imprimir nada, y `status` lo indica", tracedClick(visibleRows()[1].toggle) == "" and slash("debug codex"):find("desactivada", 1, true) ~= nil)
+check("TR5. la traza no descubre nada ni escribe en las SavedVariables: Discovery sigue con las dos entidades de la prueba",
+    Chronicle.Discovery:Count() == 2 and baseline)
+
 CreateFrame = realCreateFrame

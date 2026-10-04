@@ -20,6 +20,14 @@ Chronicle = Chronicle or {}
 
 local SYMBOL_COLLAPSED, SYMBOL_EXPANDED = "+", "-"
 
+-- TEMPORAL (rama correccion-codex-arbol): traza de clics, apagada por defecto. Ver UI/CodexTrace.lua; se retira junto con él.
+local function Trace(build)
+    local trace = Chronicle.CodexTrace
+    if trace and type(trace.Log) == "function" and trace:IsEnabled() then
+        pcall(trace.Log, trace, build)
+    end
+end
+
 local function NewNavigation(deps)
     if type(deps) ~= "table" or type(deps.theme) ~= "table" or type(deps.createFrame) ~= "function"
         or type(deps.scroll) ~= "table" then
@@ -51,7 +59,14 @@ local function NewNavigation(deps)
         row.label:SetJustifyH("LEFT")
         local ok, reason = theme:ApplyText(row.label, "BODY")
         if not ok then error("Theme:ApplyText(BODY) falló: " .. tostring(reason), 0) end
-        row.select:SetScript("OnClick", function() model:Select(row.id) end)
+        row.select:SetScript("OnClick", function()
+            Trace(function()
+                local ok, over = pcall(function() return row.toggle:IsMouseOver() end)
+                return string.format("[clic] SELECCIÓN id=%s nivel=%s | ratón sobre el +/-: %s | el +/- está visible: %s", tostring(row.id),
+                    tostring(row.select:GetFrameLevel()), ok and tostring(over) or "?", tostring(row.toggle:IsShown()))
+            end)
+            model:Select(row.id)
+        end)
 
         -- El botón de selección ocupa TODA la fila, así que el +/- se solapa con él. Crearlo después NO basta: dos hermanos del mismo
         -- nivel no tienen un orden garantizado para recibir el clic, y si gana el de selección el «+» no hace nada. Por eso el nivel
@@ -64,7 +79,14 @@ local function NewNavigation(deps)
         ok, reason = theme:ApplyText(row.symbol, "BODY")
         if not ok then error("Theme:ApplyText(BODY) falló: " .. tostring(reason), 0) end
         ApplyColor(row.symbol, "GOLD")
-        row.toggle:SetScript("OnClick", function() model:Toggle(row.id) end)
+        row.toggle:SetScript("OnClick", function()
+            local before = model:IsExpanded(row.id)
+            local ok, result = model:Toggle(row.id)
+            Trace(function()
+                return string.format("[clic] +/- id=%s nivel=%s | expandido antes=%s | Toggle -> %s, %s | filas visibles ahora=%d", tostring(row.id),
+                    tostring(row.toggle:GetFrameLevel()), tostring(before), tostring(ok), tostring(result), #model:GetRows())
+            end)
+        end)
         return row
     end
 
