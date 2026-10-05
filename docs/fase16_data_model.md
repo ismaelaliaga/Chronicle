@@ -39,6 +39,7 @@ Se diseñan los esquemas de las **cuatro capas** aprobadas y sus reglas de convi
 8. **Las entidades `retired` se conservan** en el pack (como *lápidas*), en todas las versiones (§10).
 9. **«Se publica en una versión» es una conclusión derivada** (decisión editorial ∧ binding ∧ presencia ∧ capacidades ∧ sin conflictos bloqueantes), no un campo escrito a mano (§9).
 10. **Determinismo:** ningún artefacto generado lleva marcas de tiempo ni orden dependiente del sistema (§4.6).
+11. **Autorización para el pack ≠ confianza en un dato (§5.2, §9.2, §9.5):** un valor solo viaja al pack si está respaldado por **al menos una afirmación de una fuente con `usage.generated_data = true`** (licencia conocida y aprobación del propietario). **Con D8 en `PENDING_OWNER_DECISION` ninguna fuente real lo tiene**, así que hoy el pipeline no podría publicar datos técnicos reales (`tech`, nombres observados, `display_id`); solo el contenido editorial propio de Chronicle es elegible. Esta consecuencia se documenta explícitamente y **no se decide ninguna licencia**.
 
 **Qué se deja pendiente:** ver §14 (12 puntos P1–P12 más dos decisiones heredadas), incluyendo la semántica de `interaction.all`, la clave de identidad de los lugares mientras no haya `areaID` verificado y la política de capacidades sin verificar.
 
@@ -237,8 +238,16 @@ Implementa el principio de la 15.1/D8: **ningún dataset entra al pack sin proce
 
 **Validaciones propias:**
 - `usage.generated_data = true` **exige** `license.status = known`, `redistribution ≠ unknown`, `derived_data ≠ unknown` y `owner_approval`. Sin eso, falla (**garantiza** que lo desconocido nunca llega al pack).
-- Una fuente `research_only` solo puede alimentar *contraste*, *validación local* y *candidatos*, nunca el pack.
+- Una fuente `research_only` solo puede alimentar *contraste*, *validación local* y *candidatos*, nunca el pack. **El campo que decide es `usage.generated_data`:** `status: research_only` lo fuerza a `false`, y una fuente `active` con `generated_data: false` **tampoco** puede aportar datos al pack.
 - Los snapshots crudos de las fuentes **no se versionan en el repositorio** (viven fuera); solo se versionan los hechos mínimos normalizados.
+
+**Autorización para el pack ≠ confianza (regla de elegibilidad) [PROPUESTA; corrige una contradicción detectada en la revisión del supervisor].** Son dos preguntas distintas:
+1. **¿Qué valor es el correcto?** Lo decide la reconciliación (§5.4) por `trust_tier` y `confidence`. Puede participar cualquier fuente con uso permitido (contraste, validación, candidatos).
+2. **¿Puede ese valor viajar al pack?** Solo si es **elegible**: su `resolved.value` coincide con el valor de **al menos una *claim* cuyo `source` tiene `usage.generated_data = true`**.
+- Un dato respaldado **solo** por fuentes no autorizadas (`research_only`, `generated_data: false` o licencia desconocida) **sigue siendo World Data válido, con su procedencia** (sirve para investigar, validar y generar candidatos), pero **no es elegible**: el generador lo **omite del pack** y lo registra en el informe (`source_not_authorized_for_pack`).
+- **La confianza no sustituye a la autorización:** un dato `client_verified` cuya única fuente tiene `generated_data: false` **no es elegible**.
+- Aplica a todo lo que el pack toma de World Data: existencia, `tech`, nombres observados (índice `names`) y atributos (`display_id`…). **No** aplica al contenido editorial propio de Chronicle (textos, pistas, relaciones, reglas): no es dato de una fuente externa.
+- Un `Binding` **no concede elegibilidad**: atestigua una decisión editorial, pero el dato técnico necesita respaldo autorizado en World Data.
 
 ### 5.3 `Observation` — captura del cliente real
 Registro inmutable de **una cosa observada** en un cliente concreto. Máxima confianza posible (`client_verified`).
@@ -610,13 +619,13 @@ La división física del pack en ficheros (por sección y por idioma) se decide 
 | Sección | Contenido | Clave |
 |---|---|---|
 | `entities` | `{type, status, parent?, located_in?, related_to?, importance, categories?}` — **sin** datos técnicos | `ChronicleId` |
-| `presence` | Para este `flavor`: `{available: bool, reason?, tech: [{kind, id}], attributes?: {display_id?: int}}` | `ChronicleId` |
-| `discovery` | Regla **materializada** (defaults expandidos, `derived: true` donde corresponda) y `required_capabilities` | `ChronicleId` |
-| `hints` | Pistas publicadas de esta versión (estructura completa) | `HintId` |
+| `presence` | Para este `flavor`: `{available: bool, reason?, tech: [{kind, id}], attributes?: {display_id?: int}}`. **Si `available = false`: `tech = {}`, sin `attributes` y con `reason`.** Todo dato técnico debe ser **elegible** (§5.2) | `ChronicleId` |
+| `discovery` | Regla **materializada** (defaults expandidos, `derived: true` donde corresponda) y `required_capabilities`. **Solo para entidades con `presence.available = true`** | `ChronicleId` |
+| `hints` | Pistas publicadas de esta versión **cuya entidad objetivo está disponible** (estructura completa); las de una entidad no disponible no se incluyen (el contenido editorial queda intacto) | `HintId` |
 | `texts` | Textos por idioma | `locale → ChronicleId\|HintId → TextEntry` |
-| `names` | Índice **observado** para el `Resolver`: `locale → api → cadena normalizada → ChronicleId` (sucesor de `Aliases.lua`) | — |
+| `names` | Índice **observado** para el `Resolver`: `locale → api → cadena normalizada → ChronicleId` (sucesor de `Aliases.lua`). **Solo cadenas elegibles** (§5.2) | — |
 | `tombstones` | Entidades `retired` (mínimo: `id`, `type`, `status`, `parent?`, `located_in?`, `superseded_by?`) | `ChronicleId` |
-**Qué NO entra nunca al pack:** Candidate Data, claims/procedencia completas, conflictos, fuentes, entidades no `published`/`retired`, **GUID crudos**, coordenadas (en el esquema inicial), textos de misiones/diálogos de fuentes externas, nada de fuentes `research_only`.
+**Qué NO entra nunca al pack:** Candidate Data, claims/procedencia completas, conflictos, fuentes, entidades no `published`/`retired`, **GUID crudos**, coordenadas (en el esquema inicial), textos de misiones/diálogos de fuentes externas, nada de fuentes `research_only` ni de fuentes con `usage.generated_data = false`, ni ningún dato técnico cuyo valor no esté respaldado por una fuente autorizada (§5.2).
 
 ### 8.4 Qué consume el runtime y qué tiene prohibido
 | | Puede leer | Puede escribir | **Prohibido** |
@@ -633,7 +642,7 @@ La división física del pack en ficheros (por sección y por idioma) se decide 
 | G-05 | Referencias del pack resuelven (incluidas lápidas) y el árbol de `parent` no tiene ciclos | bloquea |
 | G-06 | `discovery` materializado coincide con la gramática y con las `features` | bloquea |
 | G-07 | Lua válido para 5.1 (análisis estático existente) y sin `\x`, `\z`, `\u{}` | bloquea |
-| G-08 | Ninguna fuente `research_only` ni dato con licencia desconocida en el pack | bloquea |
+| G-08 | **Todo dato técnico del pack** (existencia, `presence.tech`, `presence.attributes`, `names`) tiene su valor resuelto respaldado por **al menos una *claim* de una fuente con `usage.generated_data = true`** (§5.2). Nunca basta con *claims* de fuentes `research_only`, con `generated_data: false` o con licencia desconocida: esos datos se **omiten** y se registran como `source_not_authorized_for_pack` | bloquea la publicación del dato |
 | G-09 | La cabecera declara `flavor` y `pack_schema`; recuentos coherentes | bloquea |
 | G-10 | Los índices `names` no tienen colisiones ambiguas dentro de un mismo `(locale, api)` (si las hay, se registran como `ambiguous` y no resuelven) | aviso/bloquea |
 
@@ -664,8 +673,9 @@ Para cada `(entidad, versión)` el generador calcula `presence.available` ⇔ **
 3. Existe un `Binding` `accepted` para `(entidad, V)` con `tech_refs` (o `places` si es lugar).
 4. Cada `TechRef` **existe** en World Data de `V` (`exists.resolved = present`).
 5. Las `required_capabilities` de sus reglas de descubrimiento están **soportadas** en `ClientProfile` de `V` (política para las `unverified`: §9.3).
-6. Ningún conflicto con `blocks_publish` abierto afecta al sujeto.
-Si alguna falla, **no se publica en esa versión** y el `ship-report` explica **cuál** (`not_applicable`, `no_binding`, `tech_ref_missing`, `entity_absent`, `capability_unavailable`, `capability_unverified`, `blocked_by_conflict`). La entidad y su lore **siguen intactos** en la capa editorial.
+6. **Procedencia autorizada:** todo dato técnico que el pack **necesita** para esa entidad (existencia, `tech`, y los nombres observados si es un lugar) es **elegible** según §5.2 (respaldado por una fuente con `usage.generated_data = true`). Los atributos **opcionales** no elegibles (p. ej. `display_id`) **se omiten sin bloquear** la publicación y se listan en el informe.
+7. Ningún conflicto con `blocks_publish` abierto afecta al sujeto.
+Si alguna falla, **no se publica en esa versión** y el `ship-report` explica **cuál** (`not_applicable`, `no_binding`, `tech_ref_missing`, `entity_absent`, `source_not_authorized_for_pack`, `capability_unavailable`, `capability_unverified`, `blocked_by_conflict`). La entidad y su lore **siguen intactos** en la capa editorial.
 
 ### 9.3 Capacidades sin verificar [PENDIENTE P10]
 Mientras una capacidad esté `unverified` en un cliente (caso inicial de **Forever**), hay dos políticas posibles: **(a) estricta:** no se publica el descubrimiento de esa entidad en esa versión; **(b) permisiva con aviso:** se publica y se marca `capability_unverified` en el informe. Recomiendo **(a) para Forever** hasta validarlo en cliente y **(b) para Era** con lo ya validado en la Fase 14.
@@ -682,6 +692,12 @@ Mientras una capacidad esté `unverified` en un cliente (caso inicial de **Forev
 | Sin datos verificados en Forever | Sin binding `accepted` ⇒ no se publica ahí; sin perder nada editorial |
 | Misma criatura con varias plantillas en una versión | `Binding.tech_refs` con varias |
 Los ejemplos completos (incluido un *fixture sintético* con IDs distintos por versión, claramente marcado como no real) están en el documento auxiliar.
+
+### 9.5 Consecuencia explícita de D8 pendiente [PENDIENTE — decisión del propietario]
+- Con **D8 en `PENDING_OWNER_DECISION`**, **ninguna fuente real** (capturas del cliente, Warcraft Wiki, bases comunitarias, addon original) tiene `usage.generated_data = true`. Por la regla de §5.2, **el pipeline no puede publicar todavía presencia técnica real** en un pack (ni `tech`, ni nombres observados, ni `display_id`); solo es elegible el **contenido editorial propio** de Chronicle (entidades, textos, pistas, reglas).
+- **No afecta al addon actual (Fases 1–14):** sus datos (`NpcTargets`, `Aliases.lua`, `displayID`) se migraron a mano **antes** de existir esta política y no pasan por el generador. Afecta al momento de **generar** un pack: migrar esos datos exigirá una decisión del propietario.
+- **Qué desbloquearía cada decisión del propietario (sin decidirla aquí):** (a) autorizar las capturas propias (`wow_client`) para `generated_data` habilitaría existencia, `tech` y nombres observados confirmados en cliente; (b) `display_id` necesitaría contrastarse con una fuente autorizada o reclasificarse su origen heredado; (c) cualquier otra fuente, solo tras conocer su licencia y condiciones. **Este documento no recomienda ni decide ninguna licencia.**
+- Mientras tanto, los ejemplos con `available = true` usan una **fuente sintética autorizada (FIXTURE)** y están marcados como tales.
 
 ---
 
@@ -728,7 +744,7 @@ Prohibiciones transversales: (1) nadie edita Generated a mano; (2) el score no c
 |---|---|---|
 | `Data/Entities/*` (`id`, `type`, `parent`, `located_in`, `related_to`) | `Entity` → pack `entities` | Misma semántica y mismas reglas de relaciones. |
 | `npcID` en la entidad | `Binding.tech_refs` → pack `presence.tech` | Sale de la identidad editorial. |
-| **`displayID` en la entidad** | `WorldEntity.attributes.display_id` → pack `presence.attributes.display_id` | **Lo usa el Codex** (`CodexModel` decide el modelo 3D por `entity.displayID`): al implementarlo, el modelo pasará a depender de la **presencia por versión**. |
+| **`displayID` en la entidad** | `WorldEntity.attributes.display_id` → pack `presence.attributes.display_id` | **Lo usa el Codex** (`CodexModel` decide el modelo 3D por `entity.displayID`): al implementarlo, el modelo pasará a depender de la **presencia por versión**. **Solo viajaría al pack con procedencia autorizada (§5.2): hoy su única procedencia es el addon original (`research_only`), así que no entraría.** |
 | `Data/NpcTargets.lua` (lista manual con `confidence`) | `Binding` + `discovery` materializado | La lista «habilitados» pasa a ser **derivada** (publicado ∧ binding ∧ capacidades ∧ sin conflictos). Su `confidence` ya usa `client_verified`/`source_confirmed`. |
 | `Localization/esES/*` (`name`, `description`, `hint`, `race`, `role`) | `Text` (`title`, `description`, `role`, `race`) y `Hint` | Los nombres propios en inglés dentro de `esES` **no se tocan ahora**; migrarlos a nombres observados es una tarea futura [APROBADO 15.1]. |
 | `Localization/esES/Aliases.lua` (24 alias; `[C]` 5, `[J]` 1, `[W]` 17, `[O]` 1) | `Binding.places[]` con `evidence` y `confidence` | Mapeo: `[C]`→`client_verified`; `[W]`,`[O]`,`[J]`→`source_reported`. |
@@ -751,11 +767,12 @@ Prohibiciones transversales: (1) nadie edita Generated a mano; (2) el score no c
 | P5 | Comportamiento de UI para entidades `retired` y contenido exacto de la lápida | Decidirlo en la fase de UI; el pack ya las conserva. |
 | P6 | Clave de identidad de **lugares** mientras no haya `area_id`/`ui_map_id` verificados | `name_only` explícito con `identity_quality`; sustituir al verificar. |
 | P7 | División física del pack en ficheros | Decidir con medidas de tamaño en la Fase 17. |
-| P8 | Qué hacer con `displayID` (atributo de mundo que usa el Codex) | Moverlo a la presencia por versión; confirmar el impacto en el Codex. |
+| P8 | Qué hacer con `displayID` (atributo de mundo que usa el Codex) | Moverlo a la presencia por versión; confirmar el impacto en el Codex. Solo viajará al pack con procedencia autorizada (P13). |
 | P9 | Política de marcas de tiempo en metadatos editoriales | Permitidas en `editorial.*` y `Provenance` (son entradas), **nunca** en el contenido generado. |
 | P10 | Política de capacidades `unverified` (estricta vs permisiva) | Estricta para Forever; permisiva con aviso para Era ya validado. |
 | P11 | Algoritmo de huella y política de «build más reciente gana» entre `client_verified` | SHA-256; **sin** auto-resolución: conflicto `drift` y decisión humana. |
 | P12 | Si el catálogo de atributos de `creature` se amplía (y con qué fuentes) | Se cierra al diseñar los importadores. |
+| P13 | Qué datos reales pueden entrar a un pack mientras D8 siga pendiente | **Decisión del propietario** (ver §9.5). Hasta entonces solo es elegible el contenido editorial propio; ningún dato técnico real. |
 | — | **Licencia de Chronicle (D8)** | **PENDING_OWNER_DECISION**: este modelo no la fija; solo garantiza que lo desconocido no llega al pack (§5.2). |
 | — | Hallazgos **en cliente** (D4–D7, D11–D14 de la 15.1) | Siguen pendientes de validación real (§15). |
 
@@ -763,6 +780,7 @@ Prohibiciones transversales: (1) nadie edita Generated a mano; (2) el score no c
 Heredado de la 15.1 y relevante para este modelo: valores reales de detección de versión; qué eventos y qué unidad corresponden a cada tipo de interacción (**todas las capacidades `interaction.*` salvo lo ya observado**); nombres exactos de zonas/subzonas y NPC por idioma; `npcID` y existencia de cada personaje en Forever; si `UnitGUID("npc")` responde durante una interacción; presencia de valores secretos; `Interface` y `.toc` efectivos. **Este modelo no asume ninguno:** los representa como `unverified` o ausentes.
 
 ## 16. Verificación de esta fase
+- **Corrección posterior a la revisión del supervisor:** se eliminaron las contradicciones entre la política de fuentes y los ejemplos (regla de elegibilidad en §5.2, condición 6 de §9.2, §9.5, G-08 y el reparto de ejemplos del documento auxiliar). **D8 sigue siendo `PENDING_OWNER_DECISION`** y no se decide ninguna licencia.
 - **Ficheros:** `docs/fase16_data_model.md` y `docs/fase16_data_model_examples.md`. Nada más.
 - **Código y tests:** `Chronicle/` y `tests/` sin cambios; los tests existentes se ejecutan solo para comprobarlo.
 - **No hay** importadores, generador, soporte Forever, ZIP, merge ni cambios en `main`.

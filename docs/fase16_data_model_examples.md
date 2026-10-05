@@ -9,7 +9,8 @@ Complementa [`fase16_data_model.md`](fase16_data_model.md). **Justificación de 
 4. **Los textos editoriales (lore, pistas) son marcadores** (`TEXTO_EDITORIAL_PENDIENTE`): redactarlos es trabajo editorial, no de esta fase.
 5. Los pesos y puntuaciones de candidatos son **ilustrativos** y **no son definitivos**.
 6. Los separadores `---` dentro de un mismo bloque YAML solo sirven para **presentar varios documentos juntos**; en el repositorio real **cada documento va en su propio fichero**.
-7. **Comprobación sintáctica de estos ejemplos:** los 2 bloques Lua cargan y se ejecutan en el intérprete de los tests (fengari) y no usan construcciones ajenas a Lua 5.1; los 8 bloques JSON son JSON válido. **Los bloques YAML NO se han validado automáticamente** (no hay *parser* YAML en el entorno y no se instalan dependencias): se validarán con el *parser* elegido en la Fase 17.
+7. **Comprobación sintáctica de estos ejemplos:** los 3 bloques Lua cargan y se ejecutan en el intérprete de los tests (fengari) y no usan construcciones ajenas a Lua 5.1; los 8 bloques JSON son JSON válido. **Los bloques YAML NO se han validado automáticamente** (no hay *parser* YAML en el entorno y no se instalan dependencias): se validarán con el *parser* elegido en la Fase 17.
+8. **Coherencia con la política de fuentes (§5.2 y §9.2 del documento principal):** ningún ejemplo de *pack* contiene un dato cuya única procedencia sea una fuente sin `usage.generated_data = true`. **Con D8 pendiente (`PENDING_OWNER_DECISION`) ninguna fuente real lo tiene**, así que los datos reales (`npcID`, nombres, `display_id`) aparecen como **World Data / investigación**, con su procedencia, y **no** en ningún *pack*. Los únicos ejemplos con `available = true` usan una **fuente sintética autorizada (FIXTURE)**.
 
 ---
 
@@ -99,6 +100,8 @@ attested:
   at: "2026-10"
 notes: "npcID descubierto por GUID en WoW Classic Era (Fase 14); coincide con Warcraft Wiki."
 ```
+> Este binding **por sí solo no basta para publicar**: atestigua la decisión editorial, pero el dato técnico (`TechRef` 786) necesita respaldo **autorizado** en World Data (§2.3). Hoy no lo tiene: ver §5 (`source_not_authorized_for_pack`).
+
 **Forever: no existe fichero de binding.** Resultado derivado: `no_binding` ⇒ **no se publica en Forever**; la entidad, su lore y sus pistas quedan intactos. (Si se quisiera dejarlo explícito, un binding con `status: unavailable` significaría «sabemos que no existe»; **no** es el caso: simplemente aún no hay datos.)
 
 ### 1.5 `Binding` de un lugar: sucesor de `Aliases.lua`
@@ -115,6 +118,8 @@ places:
     confidence: client_verified
 attested: { by: "supervisor", method: manual_review, at: "2026-10" }
 ```
+> El índice `names` de un *pack* solo incluiría esta cadena si su procedencia fuera **elegible** (§5.2 del documento principal); hoy `wow_client` no está autorizada para el *pack*, así que **no se incluiría** (ver §4.1).
+
 Mapeo de las marcas actuales de `Aliases.lua`: `[C]`→`client_verified`, `[W]`/`[O]`/`[J]`→`source_reported`. Ejemplo `[W]` (real, **sin verificar en el cliente**):
 ```yaml
 schema: "chronicle.editorial.binding/1"
@@ -257,7 +262,7 @@ license:
 usage: { research: true, contrast: true, local_validation: true, candidate_generation: true, generated_data: false }
 status: active
 ```
-> Fíjese: aunque la captura propia es la fuente más fiable, `usage.generated_data` está en `false` mientras `redistribution`/`derived_data` sean `unknown`. Activarlo exigiría `owner_approval` (la licencia de Chronicle es **PENDING_OWNER_DECISION**).
+> `usage.generated_data` está en `false`: **esta fuente no puede aportar datos al *pack*** mientras la licencia de Chronicle sea **PENDING_OWNER_DECISION**. Activarlo exigiría `license` conocida, `redistribution`/`derived_data` distintos de `unknown` y `owner_approval`, y **no se decide aquí**. Sigue siendo válida para resolver conflictos, validar y generar candidatos: **autorización para el pack ≠ confianza** (§5.2 del documento principal).
 ```yaml
 schema: "chronicle.world.source/1"
 id: warcraft_wiki
@@ -294,6 +299,40 @@ license:
   derived_data: unknown
 usage: { research: true, contrast: true, local_validation: true, candidate_generation: true, generated_data: false }
 status: research_only
+```
+
+```yaml
+schema: "chronicle.world.source/1"
+id: legacy_addon
+name: "Addon Chronicle original (datos heredados)"
+kind: other
+origin_group: legacy_addon
+trust_tier: 6
+applicable_flavors: [era]
+obtained: { method: manual_download, version: "addon original (solo lectura)" }
+license:
+  status: unknown
+  summary: "Datos heredados cuyo origen declarado (Wowhead Classic) no tiene condiciones verificadas; los displayID no se han contrastado (Fase 11)."
+  redistribution: unknown
+  derived_data: unknown
+usage: { research: true, contrast: true, local_validation: true, candidate_generation: false, generated_data: false }
+status: research_only
+```
+```yaml
+# FIXTURE SINTÉTICO. NO es una fuente real ni una decisión de licencia ni una aprobación real.
+# Existe solo para poder ilustrar un pack con available = true.
+schema: "chronicle.world.source/1"
+id: fixture_authorized_source
+name: "Fuente sintética autorizada (fixture)"
+kind: other
+origin_group: fixture
+trust_tier: 6
+applicable_flavors: [era, forever]
+obtained: { method: manual_download, version: "fixture" }
+license: { status: known, summary: "Fixture: licencia ficticia para probar el esquema.", redistribution: allowed, derived_data: allowed }
+usage: { research: true, contrast: true, local_validation: true, candidate_generation: true, generated_data: true }
+owner_approval: { by: "fixture", scope: "solo fixtures; no es una aprobación real" }
+status: active
 ```
 
 ### 2.2 `Observation` — reconstrucción de las capturas reales de la Fase 14
@@ -371,7 +410,17 @@ Observaciones: (1) `kind: interaction` aquí describe un **evento observado**; *
   }
 }
 ```
-**Qué muestra:** el `names.esES` **no existe** (no se capturó el nombre que devuelve el cliente en español): es «desconocido», no un valor inventado. `spawns` está ausente: **las coordenadas no son obligatorias**. (`legacy_addon` tendría su propio manifiesto con `status: research_only` mientras no se contraste.)
+**Qué muestra:** el `names.esES` **no existe** (no se capturó el nombre que devuelve el cliente en español): es «desconocido», no un valor inventado. `spawns` está ausente: **las coordenadas no son obligatorias**.
+
+**Elegibilidad para el *pack* (la calcula el generador; no se guarda en este registro):**
+
+| Campo | *Claims* (fuente) | ¿Fuente con `usage.generated_data = true`? | ¿Elegible para el *pack*? |
+|---|---|---|---|
+| `exists` | `wow_client` (`client_verified`) | **No** (`false`; D8 pendiente) | **No** |
+| `names.enUS` | `warcraft_wiki` (`source_reported`) | **No** (`research_only`) | **No** |
+| `attributes.display_id` | `legacy_addon` (`source_reported`) | **No** (`research_only`) | **No** |
+
+Los tres son **World Data válido, con su procedencia** (sirven para validar, contrastar y generar candidatos), pero **ninguno puede viajar a un *pack*** con la política actual: la confianza (`client_verified`) **no** sustituye a la autorización. `display_id` seguirá fuera mientras su única procedencia sea `legacy_addon`. Qué decisión del propietario cambiaría esto: ver §9.5 del documento principal (no se decide aquí).
 
 ### 2.4 Conflicto y resolución (FIXTURE)
 Dos fuentes dan nombres distintos para el mismo `TechRef` y mismo locale: **no se elige en silencio**.
@@ -466,10 +515,11 @@ Comprobaciones del esquema: `contribution = weight × normalized`; `score.total 
 
 ## 4. Generated Data (Lua 5.1)
 
-### 4.1 Extracto del pack de Classic Era
-Solo contiene **datos reales ya presentes o validados**; Forever no tiene pack porque no hay datos. Es **ilustrativo**: la estructura física exacta se decide en la Fase 17.
+### 4.1 Pack de Classic Era **bajo la política actual (D8 pendiente)**
+Con D8 en `PENDING_OWNER_DECISION`, ninguna fuente real tiene `usage.generated_data = true` (§2.1), así que **ningún dato técnico real es elegible** (§5.2 del documento principal). El pack solo contiene lo **editorial propio**; la presencia técnica sale **no disponible**, sin `tech`, sin `display_id`, sin nombres observados y sin reglas de descubrimiento activas.
 ```lua
--- GENERADO. NO EDITAR A MANO. (Chronicle pack, flavor era)
+-- GENERADO. NO EDITAR A MANO. (Chronicle pack, flavor era) ESTADO ACTUAL: D8 pendiente.
+-- Extracto: se omiten las entidades ancestras (zone:dun_morogh, continent:eastern_kingdoms...) y el resto del catalogo.
 Chronicle.Pack = {
     header = {
         pack_schema = 1,
@@ -477,7 +527,7 @@ Chronicle.Pack = {
         client = { interface = { 11507, 11509 } },
         content_revision = "sha256:EJEMPLO",
         generated_from = { world = "sha256:EJEMPLO", editorial = "sha256:EJEMPLO", generator = "0.0.0-ejemplo" },
-        counts = { entities = 3, published = 3, retired = 0, hints = 1 },
+        counts = { entities = 3, published = 3, available = 0, retired = 0, hints = 0 },
         features = { persist_hints = false, persist_interaction_progress = false },
         locales = { "esES" },
     },
@@ -488,64 +538,141 @@ Chronicle.Pack = {
         ["subzone:coldridge_valley"] = { type = "subzone", status = "published", parent = "zone:dun_morogh" },
     },
 
+    -- Sin datos tecnicos: ninguno es elegible (tech vacio, sin attributes).
     presence = {
-        ["npc:grelin_whitebeard"] = { available = true, tech = { { kind = "creature", id = 786 } }, attributes = { display_id = 1354 } },
-        ["npc:sten_stoutarm"] = { available = true, tech = { { kind = "creature", id = 658 } }, attributes = { display_id = 1362 } },
-        ["subzone:coldridge_valley"] = { available = true, tech = {} },
+        ["npc:grelin_whitebeard"] = { available = false, reason = "source_not_authorized_for_pack", tech = {} },
+        ["npc:sten_stoutarm"] = { available = false, reason = "source_not_authorized_for_pack", tech = {} },
+        ["subzone:coldridge_valley"] = { available = false, reason = "source_not_authorized_for_pack", tech = {} },
+    },
+
+    discovery = {},   -- solo para entidades disponibles: ninguna
+    hints = {},       -- las pistas de entidades no disponibles no se incluyen (el contenido editorial queda intacto)
+    names = {},       -- sin cadenas elegibles (ver 1.5 y 2.3)
+    tombstones = {},
+}
+```
+**Notas:**
+- **`display_id` no aparece:** su única procedencia es `legacy_addon` (`research_only`). Sigue siendo World Data de investigación (§2.3), pero no puede entrar al pack.
+- **Esto no cambia el addon actual** (Fases 1-14): sus datos se migraron a mano antes de existir esta política y no pasan por el generador (§9.5 del documento principal). Describe qué ocurriría **al generar** un pack con la política vigente.
+- Compatible con Lua 5.1: sin `goto`, operadores de bits ni `//`; sin escapes `\x`/`\z`/`\u{}` (los textos con caracteres no ASCII usarían escapes decimales `\ddd`).
+
+### 4.2 Pack con una fuente **autorizada** (FIXTURE SINTÉTICO)
+Ilustra qué ocurre cuando una fuente **sí** está autorizada para el pack: aquí una fuente **sintética** (`fixture_authorized_source`, §2.1). **Todos los datos son inventados** y no son de WoW; no implica ninguna decisión sobre fuentes reales.
+```lua
+-- GENERADO. NO EDITAR A MANO. FIXTURE SINTETICO: todos los datos son inventados; fuente = fixture_authorized_source.
+Chronicle.Pack = {
+    header = {
+        pack_schema = 1,
+        flavor = "era",
+        client = { interface = { 11507 } },
+        content_revision = "sha256:EJEMPLO",
+        generated_from = { world = "sha256:EJEMPLO", editorial = "sha256:EJEMPLO", generator = "0.0.0-ejemplo" },
+        counts = { entities = 5, published = 5, available = 5, retired = 0, hints = 0 },
+        features = { persist_hints = false, persist_interaction_progress = false },
+        locales = { "esES" },
+    },
+
+    entities = {
+        ["continent:fixture_world"] = { type = "continent", status = "published", importance = "standard" },
+        ["zone:fixture_land"] = { type = "zone", status = "published", importance = "standard", parent = "continent:fixture_world" },
+        ["subzone:fixture_hollow"] = { type = "subzone", status = "published", importance = "standard", parent = "zone:fixture_land" },
+        ["npc:fixture_example_elder"] = { type = "npc", status = "published", importance = "standard", located_in = "subzone:fixture_hollow" },
+        ["npc:fixture_example_keeper"] = { type = "npc", status = "published", importance = "standard", located_in = "subzone:fixture_hollow" },
+    },
+
+    presence = {
+        ["continent:fixture_world"] = { available = true, tech = {} },
+        ["zone:fixture_land"] = { available = true, tech = {} },
+        ["subzone:fixture_hollow"] = { available = true, tech = {} },
+        ["npc:fixture_example_elder"] = { available = true, tech = { { kind = "creature", id = 90004 } } },
+        ["npc:fixture_example_keeper"] = { available = true, tech = { { kind = "creature", id = 90001 } } },
     },
 
     discovery = {
-        ["npc:grelin_whitebeard"] = {
+        ["continent:fixture_world"] = { method = "none" },
+        ["zone:fixture_land"] = { method = "place_enter" },
+        ["subzone:fixture_hollow"] = { method = "place_enter" },
+        ["npc:fixture_example_elder"] = {
             method = "interaction",
-            requirements = { place_discovered = { id = "zone:dun_morogh", strict = false, derived = true } },
+            requirements = { place_discovered = { id = "zone:fixture_land", strict = false, derived = true } },
             interaction = { type = "gossip" },
             required_capabilities = { "interaction.gossip" },
         },
-        ["subzone:coldridge_valley"] = { method = "place_enter" },
+        ["npc:fixture_example_keeper"] = {
+            method = "interaction",
+            requirements = { all = {
+                { place_discovered = { id = "subzone:fixture_hollow", strict = true } },
+                { entity_discovered = { id = "npc:fixture_example_elder" } },
+            } },
+            interaction = { any = { { type = "gossip" }, { type = "quest" } } },
+            required_capabilities = { "interaction.gossip", "interaction.quest" },
+        },
     },
+
+    hints = {},
 
     names = {
         esES = {
-            subzone_text = { ["valle de crestanevada"] = "subzone:coldridge_valley" },
+            zone_text = { ["fixture land"] = "zone:fixture_land" },
+            subzone_text = { ["fixture hollow"] = "subzone:fixture_hollow" },
         },
     },
 
     tombstones = {},
 }
 ```
-**Notas:**
-- Los `display_id` 1354 y 1362 son los **heredados del addon original** y **no están contrastados** (Fase 11): el pack los transmite tal cual vienen de World Data con su confianza; el Codex decidiría si los usa.
-- `required_capabilities = { "interaction.gossip" }` está `unverified` en Era en este modelo: según la política de §9.3 del documento principal, el descubrimiento de Grelin con `gossip` **requiere validar la capacidad** antes de publicarse como regla activa en Era (o publicarse con aviso, política **permisiva**).
-- Compatible con Lua 5.1: sin `goto`, sin operadores de bits, sin escapes `\x`/`\z`/`\u{}`; los textos con caracteres no ASCII usarían escapes decimales `\ddd`.
-- `names` usa la **cadena normalizada** (minúsculas) como clave: lo mismo que hace el `Resolver` hoy (recorta, colapsa espacios, minúsculas y acentos del español).
+Aquí **todo dato técnico es elegible** porque su valor está respaldado por una *claim* de una fuente con `usage.generated_data = true`. Los `id` `90001` y `90004` son **inventados**.
 
-### 4.2 Lápida de una entidad retirada (FIXTURE)
+### 4.3 Lápida de una entidad retirada (FIXTURE)
 ```lua
     tombstones = {
         ["npc:fixture_retired_example"] = { type = "npc", status = "retired", located_in = "subzone:fixture_hollow", superseded_by = "npc:fixture_example_keeper" },
     },
 ```
-Datos mínimos, sin texto ni reglas. Con esta lápida, `Registry:Has("npc:fixture_retired_example")` seguiría siendo `true`, y un descubrimiento antiguo guardado en `ChronicleCharDB` **no quedaría huérfano**.
+Datos mínimos, sin texto ni reglas ni datos técnicos. Con esta lápida, `Registry:Has("npc:fixture_retired_example")` seguiría siendo `true`, y un descubrimiento antiguo guardado en `ChronicleCharDB` **no quedaría huérfano**.
 
 ---
 
 ## 5. Informe de publicación (`ship-report`, JSON, no va en el ZIP)
 
-Para el NPC real y el fixture, **por versión**, con el motivo exacto:
+Para el NPC real y el fixture, **por versión**, con el motivo exacto. `available` respeta **todas** las condiciones de publicación (§9.2 del documento principal), incluida la **procedencia autorizada** (condición 6).
 ```json
 {
   "schema": "chronicle.report.ship/1",
+  "policy": { "capabilities_unverified": { "era": "warn", "forever": "block" }, "d8": "PENDING_OWNER_DECISION" },
   "entries": [
-    { "entity": "npc:grelin_whitebeard", "flavor": "era",     "available": true,  "reasons": [], "warnings": ["capability_unverified:interaction.gossip"] },
-    { "entity": "npc:grelin_whitebeard", "flavor": "forever", "available": false, "reasons": ["no_binding"], "warnings": [] },
-    { "entity": "npc:fixture_example_keeper", "flavor": "era",     "available": true,  "reasons": [], "warnings": [] },
-    { "entity": "npc:fixture_example_keeper", "flavor": "forever", "available": false, "reasons": ["capability_unverified:interaction.quest"], "warnings": [] }
+    {
+      "entity": "npc:grelin_whitebeard", "flavor": "era", "available": false,
+      "reasons": ["source_not_authorized_for_pack"],
+      "details": [
+        { "datum": "exists", "claims_from": ["wow_client"], "blocked_because": "usage.generated_data = false (D8 pendiente)" }
+      ],
+      "omitted_optional": [
+        { "datum": "attributes.display_id", "claims_from": ["legacy_addon"], "blocked_because": "status = research_only" }
+      ],
+      "warnings": ["capability_unverified:interaction.gossip"]
+    },
+    {
+      "entity": "npc:grelin_whitebeard", "flavor": "forever", "available": false,
+      "reasons": ["no_binding"], "warnings": []
+    },
+    {
+      "entity": "npc:fixture_example_keeper", "flavor": "era", "available": true,
+      "reasons": [], "warnings": [], "authorized_by": ["fixture_authorized_source"]
+    },
+    {
+      "entity": "npc:fixture_example_keeper", "flavor": "forever", "available": false,
+      "reasons": ["capability_unverified:interaction.quest"], "warnings": []
+    }
   ]
 }
 ```
 Lectura:
-- Grelin en **Era**: se publica (política permisiva con aviso, hasta validar `gossip`); en **Forever**: **no se publica** porque no hay binding (no hay datos), **sin perder nada editorial**.
-- El fixture en **Forever** no se publica por política **estricta** (la capacidad `quest` está `unverified`); se publicaría en cuanto una `Observation` de ese build la deje `verified`.
+- **Grelin en Era: `available = false`.** Aunque tenga *binding* aceptado, la existencia de `creature 786` solo está respaldada por `wow_client`, que no está autorizada para el *pack* mientras D8 siga pendiente. La capacidad `interaction.gossip` sin verificar es solo un **aviso** en Era (política permisiva); **no** es lo que bloquea. `display_id` se **omite** (atributo opcional) y se registra.
+- **Grelin en Forever: `available = false`** por `no_binding` (no hay datos de Forever), **sin perder nada editorial**.
+- **Fixture en Era: `available = true`**: todos los datos técnicos son elegibles (fuente sintética autorizada) y sus capacidades se suponen `verified` en el perfil sintético de `era` (no mostrado).
+- **Fixture en Forever: `available = false`** por la política **estricta** de capacidades `unverified` (§9.3 del documento principal); se publicaría en cuanto una `Observation` de ese build deje la capacidad `verified`.
+- **Qué cambiaría si el propietario resolviera D8 autorizando `wow_client`:** `exists` de Grelin pasaría a ser elegible y `source_not_authorized_for_pack` desaparecería de esa entrada; `display_id` seguiría omitido. **Eso es una decisión del propietario y no se toma aquí.**
 
 ---
 
@@ -557,9 +684,10 @@ Lectura:
 | Forever → otro ID técnico | §1.6 (**fixture sintético**) |
 | Nombres distintos por locale | §2.3 (`enUS` presente; `esES` desconocido) |
 | Presencia/capacidades/disponibilidad distintas por versión | §1.2, §2.5, §5 |
-| Contexto geográfico, interacción, `any`/`all`, dependencias | §1.1, §1.2 |
+| Contexto geográfico, interacción, `any`/`all`, dependencias | §1.1, §1.2, §4.2 |
 | `requires_hint` y pistas estructuradas | §1.1, §1.7, §1.8 |
-| Entidad retirada conocida por el Registry | §1.10, §4.2 |
-| Procedencia, confianza, conflictos, overrides | §2.1–§2.4, §1.9 |
+| Entidad retirada conocida por el Registry | §1.10, §4.3 |
+| Procedencia, confianza, conflictos, overrides | §2.1-§2.4, §1.9 |
+| **Autorización para el pack ≠ confianza** (política de fuentes coherente con los packs) | §2.1, §2.3, §4.1, §4.2, §5 |
 | Candidatos sin decisión | §3.2, §1.9 |
-| Pack Lua generado | §4 |
+| Pack Lua generado | §4.1 (política actual), §4.2 (fuente autorizada FIXTURE) |
