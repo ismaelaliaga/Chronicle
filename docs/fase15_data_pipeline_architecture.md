@@ -1,5 +1,7 @@
 # Fase 15 — Auditoría arquitectónica y propuesta del pipeline de datos
 
+> **Nota (Fase 15.1):** este documento fue **revisado** en [`fase15_1_architecture_review.md`](fase15_1_architecture_review.md). Esa revisión **sustituye o corrige** D5, D6, D8, D9, D10, D11, D13, D14 y D15 (y la recomendación de licencia de D8), añade el principio **IDENTIFICATION ≠ DISCOVERY ≠ EDITORIAL INCLUSION**, los cuatro niveles de datos y la sección `ClientAdapter`. Donde ambos documentos discrepan, **prevalece la Fase 15.1**. El resto de este documento se conserva como análisis original.
+
 **Rama:** `fase15-data-pipeline-architecture`, creada desde `fase14-npc-discovery` (`b7f5d739558f5c6c5c623a254a60fe84a5e8dcb1`).
 **Fecha de la investigación externa:** 2026-10-05. Todo lo externo es información pública a esa fecha y puede cambiar (Forever está en beta).
 **Alcance:** este documento es **solo análisis y propuesta**. No se ha modificado el addon, ni los datos, ni los tests, ni `main`. No hay generador, no hay importación, no hay soporte Forever.
