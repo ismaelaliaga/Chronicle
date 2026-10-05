@@ -53,29 +53,30 @@ Pruebas añadidas sin defecto asociado: `E1` (un evento que el cliente rechaza r
 
 Evidencia sobre el GUID: la Warcraft Wiki ([GUID](https://warcraft.wiki.gg/wiki/GUID), [UnitGUID](https://warcraft.wiki.gg/wiki/API_UnitGUID)) documenta `Creature-0-serverID-instanceID-zoneUID-npcID-spawnUID` con el npcID en la sexta posición y ejemplos de addons de Classic que lo usan. **Sigue sin verificarse en el cliente 1.15.7**; el parser conserva su comportamiento seguro (formato distinto = no descubre nada) y `/chronicle npc` enseña el GUID crudo para comprobarlo.
 
-## 7. Estado de validación (candidata de cierre de la Fase 14)
+## 7. Cierre de la Fase 14: VALIDADA EN CLIENTE REAL
 
-### Validado en WoW Classic Era real (comunicado por el supervisor y visto en sus capturas de `/chronicle npc`)
-- **Formato del GUID:** `/chronicle npc` mostró `Creature-0-5250-0-82-705-00004152E0` y `Creature-0-5250-0-82-1354-00003C6363`: siete campos separados por «-», con el `npcID` en la sexta posición (el parser extrajo 705 y 1354).
-- **Eventos con unidad y GUID:** `UPDATE_MOUSEOVER_UNIT` (`mouseover`) y `NAME_PLATE_UNIT_ADDED` (`nameplate2`).
-- **NPC no habilitado:** esas dos unidades salieron `not_enabled`: no se descubrieron.
-- **Descubrimiento de Grelin Whitebeard (786) y Sten Stoutarm (658):** el supervisor confirma que poner el ratón encima o ponerlos como objetivo desbloquea su entrada. Que se descubrieran por GUID implica que el cliente devolvió exactamente esos `npcID`.
-- **Codex:** ambas entradas aparecen con nombre, modelo, raza y rol; lo no descubierto sigue como «???».
-- **`/chronicle where` en Coldridge Valley** mostró `Subzona: Valle de Crestanevada` sin máscara (el Resolver no la conocía).
-- Anterior a esta fase y también probado a mano: Codex con árbol expandible y avisos de descubrimiento de lugares.
+**Build probada en WoW Classic Era:** `Chronicle-npc-discovery-3.zip` (SHA-256 `ad45f481212a6d291b497c43bd34639eb1f5de7d42772bb30f801968a8a7ad29`), generada desde el commit `7d6d6394dc9978487811d1b5ba277a8718fd0937`. Resultado de la prueba manual comunicado por el supervisor: **todo correcto**. Los commits posteriores a `7d6d639` en esta rama solo tocan documentación (no forman parte del addon instalable), por lo que ese ZIP sigue siendo la build probada.
 
-### Validado solo con pruebas automáticas (cliente simulado; NO demuestra compatibilidad con WoW)
-- Parser de GUID (válidos, jugador, mascota, objeto, formatos mal formados), lista explícita, coincidencia única en el Registry, nombre discordante, nombre desconocido, fallos de `Discover` y reintento, repetidos, un único aviso, aislamiento de errores por evento y por módulo, `/chronicle npc` sin ID canónicos de entidades no descubiertas, y las vías por separado (`P1`–`P6`).
-- El alias `Valle de Crestanevada` → `subzone:coldridge_valley` (solo como subzona) y su descubrimiento con `ZoneDiscovery`.
-- Resultado: `npm test` (desde `tests/`): **1632 superadas, 0 fallidas**, código de salida 0.
+### Validado en WoW Classic Era (prueba manual del supervisor y capturas de `/chronicle npc`)
+- **GUID real y extracción del NPC ID:** formato `Creature-0-…-npcID-…` con siete campos y el `npcID` en la sexta posición (observado, por ejemplo, `Creature-0-5250-0-82-705-00004152E0`).
+- **Grelin Whitebeard (786) y Sten Stoutarm (658):** se descubren y aparecen en el Codex con nombre, modelo, raza y rol. Su confianza es `client_verified`.
+- **Descubrimiento por objetivo** y **por ratón (`mouseover`)**: el supervisor confirma que ambas vías desbloquean la entrada. (Se observó además que `NAME_PLATE_UNIT_ADDED` entrega GUID en el cliente. No se documentó un aislamiento estricto de cada vía con las placas de nombre desactivadas: queda como detalle de la validación, no como fallo.)
+- **NPC no habilitados:** no se descubren (observado con las unidades 705 y 1354, resultado `not_enabled`).
+- **Avisos de descubrimiento** (lugares y NPC) y **árbol del Codex**.
+- **Integración con el Codex y política de privacidad:** lo no descubierto sigue como «???» y no se revelan IDs canónicos de entidades bloqueadas.
+- **Alias `Valle de Crestanevada`** → `subzone:coldridge_valley`: se resuelve, la subzona se descubre, genera su aviso y aparece en el Codex.
+- `main` no se ha tocado.
 
-### Pendiente de validación manual (tras instalar esta candidata)
-- **El alias `Valle de Crestanevada`:** instalar esta candidata, entrar en el valle y comprobar que la subzona se descubre y genera su aviso, y que `/chronicle where` pasa a mostrar «???» o el nombre descubierto según el caso. El texto del alias es el que comunicó el supervisor; su exactitud byte a byte frente a `GetSubZoneText()` no se ha medido (el Resolver ignora mayúsculas y espacios repetidos, no tildes).
-- Aislar estrictamente cada vía (objetivo / ratón) con las placas de nombre desactivadas, y que el descubrimiento por objetivo funcione sin pasar el ratón: no se ha demostrado de forma aislada.
-- `GOSSIP_SHOW` con la unidad `npc` (conversación).
+### Validado mediante pruebas automáticas (cliente simulado; no sustituyen al cliente real)
+`npm test` (desde `tests/`): **1632 pruebas superadas, 0 fallidas**, código de salida 0. Cubren el parser de GUID, la lista explícita, la coincidencia única en el Registry, el nombre discordante, los fallos de `Discover`, los repetidos y avisos únicos, el aislamiento de errores por evento y por módulo, `/chronicle npc` sin IDs canónicos de entidades bloqueadas y las vías por separado (`P1`–`P6`).
 
-### Niveles de confianza de los NPC habilitados
-`npc:grelin_whitebeard` (786) y `npc:sten_stoutarm` (658): `client_verified` (dos fuentes y observación en el cliente). No hay ningún otro NPC habilitado; los demás NPC migrados están en el Registry pero **no** en la lista.
+### Funcionalidades de la Fase 14 consideradas cerradas
+Servicio `NpcDiscovery` por GUID con lista explícita (`NpcTargets`), eventos `PLAYER_TARGET_CHANGED` / `UPDATE_MOUSEOVER_UNIT` / `NAME_PLATE_UNIT_ADDED`, comando `/chronicle npc`, Grelin Whitebeard y Sten Stoutarm habilitados, y el alias `Valle de Crestanevada`.
 
-### Fuera de alcance de esta fase (no implementado)
-Más NPC habilitados, coordenadas (siguen desconocidas), descubrimiento por proximidad (`Proximity` sin objetivos y sin llamadas a `Evaluate()`), recopilación asistida de datos, importación masiva desde bases externas y alias de nombres de NPC en español (la comprobación de nombre queda «unverified»).
+### Fuera de alcance (decisiones de alcance, no errores; NO hecho en esta fase)
+- Catálogo completo de NPC y cualquier NPC habilitado adicional.
+- Recopilación masiva de datos y cualquier importación automática desde fuentes externas (miles de NPC).
+- Coordenadas verificadas (siguen desconocidas).
+- Descubrimiento por proximidad (`Proximity` sin objetivos; nadie llama a `Evaluate()`).
+- Validación independiente de `GOSSIP_SHOW` con la unidad `npc`.
+- Recopilación asistida de datos y alias de nombres de NPC en español (la comprobación de nombre queda «unverified»).
