@@ -1,0 +1,59 @@
+{
+  "exists": {
+    "claims": [
+      {
+        "confidence": "source_reported",
+        "provenance": {
+          "locator": "fixture sintetico",
+          "method": "import",
+          "source": "fixture_authorized_source",
+          "source_version": "fixture"
+        },
+        "value": "present"
+      }
+    ],
+    "resolved": {
+      "rule": "single_claim",
+      "status": "resolved",
+      "value": "present"
+    }
+  },
+  "names": {
+    "enUS": {
+      "claims": [
+        {
+          "confidence": "source_reported",
+          "provenance": {
+            "locator": "fixture sintetico",
+            "method": "import",
+            "source": "fixture_source_a",
+            "source_version": "fixture"
+          },
+          "value": "Fixture Conflicted A"
+        },
+        {
+          "confidence": "source_reported",
+          "provenance": {
+            "locator": "fixture sintetico",
+            "method": "import",
+            "source": "fixture_source_b",
+            "source_version": "fixture"
+          },
+          "value": "Fixture Conflicted B"
+        }
+      ],
+      "resolved": {
+        "conflict": "conf:7fa26622afa68fe1",
+        "rule": "none",
+        "status": "conflict",
+        "value": null
+      }
+    }
+  },
+  "ref": {
+    "flavor": "era",
+    "id": 90005,
+    "kind": "creature"
+  },
+  "schema": "chronicle.world.entity/1"
+}

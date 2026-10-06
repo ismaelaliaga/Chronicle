@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/pack.manifest.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.pack.manifest/1"
+    },
+    "pack_schema": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "flavor": {
+      "$ref": "common.json#/$defs/FlavorId"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "interface"
+      ]
+    },
+    "content_revision": {
+      "$ref": "common.json#/$defs/Fingerprint"
+    },
+    "generated_from": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "world": {
+          "$ref": "common.json#/$defs/Fingerprint"
+        },
+        "editorial": {
+          "$ref": "common.json#/$defs/Fingerprint"
+        },
+        "generator": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "world",
+        "editorial",
+        "generator"
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entities": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "published": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "available": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retired": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hints": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "entities",
+        "published",
+        "available",
+        "retired",
+        "hints"
+      ]
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "persist_hints": {
+          "type": "boolean"
+        },
+        "persist_interaction_progress": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "persist_hints",
+        "persist_interaction_progress"
+      ]
+    },
+    "locales": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/Locale"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "path",
+          "sha256"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema",
+    "pack_schema",
+    "flavor",
+    "client",
+    "content_revision",
+    "generated_from",
+    "counts",
+    "features",
+    "locales",
+    "files"
+  ],
+  "title": "Manifiesto del pack generado (Fase 16, 8.1-8.2). Sin marcas de tiempo"
+}

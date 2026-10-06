@@ -1,0 +1,33 @@
+{
+  "identity_quality": "name_only",
+  "ref": {
+    "flavor": "era",
+    "key": "valle de crestanevada",
+    "kind": "name_only"
+  },
+  "schema": "chronicle.world.place/1",
+  "texts": {
+    "esES": {
+      "subzone_text": {
+        "claims": [
+          {
+            "confidence": "client_verified",
+            "provenance": {
+              "by": "supervisor",
+              "locator": "/chronicle where en Coldridge Valley (Fase 14)",
+              "method": "manual",
+              "source": "wow_client",
+              "source_version": "Classic Era (build no registrado)"
+            },
+            "value": "Valle de Crestanevada"
+          }
+        ],
+        "resolved": {
+          "rule": "single_claim",
+          "status": "resolved",
+          "value": "Valle de Crestanevada"
+        }
+      }
+    }
+  }
+}

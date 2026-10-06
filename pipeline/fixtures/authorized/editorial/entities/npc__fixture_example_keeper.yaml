@@ -1,0 +1,22 @@
+schema: "chronicle.editorial.entity/1"
+id: "npc:fixture_example_keeper"
+type: npc
+status: published
+importance: standard
+located_in: "subzone:fixture_hollow"
+applies_to: [era, fixture_alt]
+requires_hint: false
+discovery:
+  method: interaction
+  requirements:
+    all:
+      - place_discovered: { id: "subzone:fixture_hollow", strict: true }
+      - entity_discovered: { id: "npc:fixture_example_elder" }
+  interaction:
+    any: [ { type: gossip }, { type: quest } ]
+flavors:
+  fixture_alt:
+    discovery:
+      method: interaction
+      interaction: { type: quest }
+editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }

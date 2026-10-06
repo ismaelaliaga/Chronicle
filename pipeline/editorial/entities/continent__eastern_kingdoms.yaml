@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.entity/1"
+id: "continent:eastern_kingdoms"
+type: continent
+status: published
+importance: standard
+applies_to: [era]
+discovery: { method: none }
+editorial: { author: "fase17_bootstrap", notes: "Marcador de infraestructura (Fase 17): importancia, tipo de interaccion y pistas pendientes de decision editorial." }

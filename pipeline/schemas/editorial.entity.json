@@ -1,0 +1,458 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/editorial.entity.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.editorial.entity/1"
+    },
+    "id": {
+      "$ref": "common.json#/$defs/ChronicleId"
+    },
+    "type": {
+      "enum": [
+        "continent",
+        "zone",
+        "city",
+        "subzone",
+        "npc",
+        "lore"
+      ]
+    },
+    "status": {
+      "enum": [
+        "accepted",
+        "drafting",
+        "review",
+        "published",
+        "retired"
+      ]
+    },
+    "importance": {
+      "enum": [
+        "major",
+        "standard",
+        "minor"
+      ]
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "parent": {
+      "$ref": "common.json#/$defs/ChronicleId"
+    },
+    "located_in": {
+      "$ref": "common.json#/$defs/ChronicleId"
+    },
+    "related_to": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/ChronicleId"
+      },
+      "uniqueItems": true
+    },
+    "applies_to": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/FlavorId"
+      },
+      "uniqueItems": true
+    },
+    "discovery": {
+      "$ref": "#/$defs/DiscoveryRules"
+    },
+    "flavors": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "discovery": {
+              "$ref": "#/$defs/DiscoveryRules"
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": []
+        }
+      }
+    },
+    "requires_hint": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "const": "auto"
+        }
+      ]
+    },
+    "editorial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewed_at": {
+          "$ref": "common.json#/$defs/DateText"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "author"
+      ]
+    },
+    "retired": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "since": {
+          "$ref": "common.json#/$defs/DateText"
+        },
+        "superseded_by": {
+          "$ref": "common.json#/$defs/ChronicleId"
+        }
+      },
+      "required": [
+        "reason"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "type",
+    "status",
+    "applies_to",
+    "editorial"
+  ],
+  "title": "Entidad editorial (Fase 16, 7.2)",
+  "$defs": {
+    "InteractionSpec": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "gossip",
+                "quest",
+                "merchant",
+                "trainer",
+                "flight_master",
+                "profession",
+                "other"
+              ]
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "if": {
+            "properties": {
+              "type": {
+                "const": "other"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "label"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "label"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/InteractionSpec"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "any"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/InteractionSpec"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "all"
+          ]
+        }
+      ]
+    },
+    "Requirement": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "place_discovered": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "$ref": "common.json#/$defs/ChronicleId"
+                },
+                "strict": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "required": [
+            "place_discovered"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "entity_discovered": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "$ref": "common.json#/$defs/ChronicleId"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "required": [
+            "entity_discovered"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hint_seen": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "$ref": "common.json#/$defs/HintId"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "required": [
+            "hint_seen"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Requirement"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "all"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Requirement"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "any"
+          ]
+        }
+      ]
+    },
+    "DiscoveryRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "interaction",
+            "place_enter",
+            "none"
+          ]
+        },
+        "requirements": {
+          "$ref": "#/$defs/Requirement"
+        },
+        "interaction": {
+          "$ref": "#/$defs/InteractionSpec"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "interaction"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "required": [
+              "interaction"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "interaction"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "retired"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "retired"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "discovery"
+              ]
+            },
+            {
+              "required": [
+                "flavors"
+              ]
+            }
+          ]
+        }
+      },
+      "else": {
+        "not": {
+          "required": [
+            "retired"
+          ]
+        },
+        "properties": {
+          "applies_to": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "npc",
+              "lore"
+            ]
+          },
+          "status": {
+            "not": {
+              "const": "retired"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "discovery"
+        ]
+      }
+    }
+  ]
+}

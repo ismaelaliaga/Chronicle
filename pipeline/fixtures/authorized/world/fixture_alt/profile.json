@@ -1,0 +1,31 @@
+{
+  "build": "fixture-0",
+  "capabilities": {
+    "interaction.gossip": {
+      "evidence": [
+        "obs:fixture_alt_gossip"
+      ],
+      "status": "verified"
+    },
+    "interaction.quest": {
+      "evidence": [],
+      "status": "unverified"
+    },
+    "place.subzone_text": {
+      "evidence": [
+        "obs:fixture_alt_subzone"
+      ],
+      "status": "verified"
+    },
+    "place.zone_text": {
+      "evidence": [
+        "obs:fixture_alt_zone"
+      ],
+      "status": "verified"
+    }
+  },
+  "flavor": "fixture_alt",
+  "interface": "fixture",
+  "schema": "chronicle.world.client_profile/1",
+  "signals": {}
+}

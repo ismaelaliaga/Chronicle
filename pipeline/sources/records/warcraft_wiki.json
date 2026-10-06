@@ -1,0 +1,44 @@
+{
+  "records": [
+    {
+      "confidence": "source_reported",
+      "field": "names.enUS",
+      "flavor": "era",
+      "provenance": {
+        "by": "claude_fase14",
+        "locator": "Warcraft Wiki: Grelin Whitebeard",
+        "method": "manual",
+        "retrieved_at": "2026-10-04",
+        "source_url": "https://warcraft.wiki.gg/wiki/Grelin_Whitebeard",
+        "source_version": "consulta manual"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 786,
+        "kind": "creature"
+      },
+      "value": "Grelin Whitebeard"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "names.enUS",
+      "flavor": "era",
+      "provenance": {
+        "by": "claude_fase14",
+        "locator": "Warcraft Wiki: Sten Stoutarm",
+        "method": "manual",
+        "retrieved_at": "2026-10-04",
+        "source_url": "https://warcraft.wiki.gg/wiki/Sten_Stoutarm",
+        "source_version": "consulta manual"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 658,
+        "kind": "creature"
+      },
+      "value": "Sten Stoutarm"
+    }
+  ],
+  "schema": "chronicle.world.claim_records/1",
+  "source": "warcraft_wiki"
+}

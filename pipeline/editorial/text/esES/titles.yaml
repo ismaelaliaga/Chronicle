@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.text/1"
+locale: esES
+entries:
+  "continent:eastern_kingdoms": { title: "Reinos del Este" }
+  "zone:dun_morogh": { title: "Dun Morogh" }
+  "subzone:coldridge_valley": { title: "Coldridge Valley" }
+  "npc:grelin_whitebeard": { title: "Grelin Whitebeard" }
+  "npc:sten_stoutarm": { title: "Sten Stoutarm" }

@@ -1,0 +1,12 @@
+schema: "chronicle.candidate.scoring_profile/1"
+id: dun_morogh_pilot
+version: 1
+flavors: [era]
+signals:
+  - { id: quest_relevance, weight: 30, enabled: true }
+  - { id: generic_vendor, weight: -40, enabled: true }
+queue: { max_items: 50 }
+calibration:
+  notes: "FIXTURE SINTETICO: pesos ilustrativos, NO definitivos."
+  attested_by: "fixture"
+author: "fixture"

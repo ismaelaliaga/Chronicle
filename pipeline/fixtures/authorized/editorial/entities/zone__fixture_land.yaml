@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.entity/1"
+id: "zone:fixture_land"
+type: zone
+status: published
+parent: "continent:fixture_world"
+applies_to: [era, fixture_alt]
+discovery: { method: place_enter }
+editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }

@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.source.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.source/1"
+    },
+    "id": {
+      "$ref": "common.json#/$defs/SourceId"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "client_capture",
+        "client_export",
+        "community_db",
+        "server_emulator_db",
+        "wiki",
+        "editorial",
+        "other"
+      ]
+    },
+    "origin_group": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trust_tier": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 7
+    },
+    "applicable_flavors": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/FlavorId"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "obtained": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "enum": [
+            "capture",
+            "git_clone",
+            "manual_download",
+            "api"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "retrieved_at": {
+          "anyOf": [
+            {
+              "$ref": "common.json#/$defs/DateText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "method",
+        "version"
+      ]
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "known",
+            "unknown"
+          ]
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "redistribution": {
+          "enum": [
+            "allowed",
+            "restricted",
+            "unknown"
+          ]
+        },
+        "derived_data": {
+          "enum": [
+            "allowed",
+            "restricted",
+            "unknown"
+          ]
+        },
+        "attribution": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "status",
+        "summary",
+        "redistribution",
+        "derived_data"
+      ]
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "research": {
+          "type": "boolean"
+        },
+        "contrast": {
+          "type": "boolean"
+        },
+        "local_validation": {
+          "type": "boolean"
+        },
+        "candidate_generation": {
+          "type": "boolean"
+        },
+        "generated_data": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "research",
+        "contrast",
+        "local_validation",
+        "candidate_generation",
+        "generated_data"
+      ]
+    },
+    "owner_approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "by",
+        "scope"
+      ]
+    },
+    "status": {
+      "enum": [
+        "active",
+        "research_only",
+        "blocked"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "name",
+    "kind",
+    "origin_group",
+    "trust_tier",
+    "applicable_flavors",
+    "obtained",
+    "license",
+    "usage",
+    "status"
+  ],
+  "title": "Manifiesto de fuente (Fase 16, 5.2)",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "usage": {
+            "properties": {
+              "generated_data": {
+                "const": true
+              }
+            },
+            "required": [
+              "generated_data"
+            ]
+          }
+        },
+        "required": [
+          "usage"
+        ]
+      },
+      "then": {
+        "required": [
+          "owner_approval"
+        ],
+        "properties": {
+          "status": {
+            "const": "active"
+          },
+          "license": {
+            "properties": {
+              "status": {
+                "const": "known"
+              },
+              "redistribution": {
+                "enum": [
+                  "allowed",
+                  "restricted"
+                ]
+              },
+              "derived_data": {
+                "enum": [
+                  "allowed",
+                  "restricted"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "research_only"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "usage": {
+            "properties": {
+              "generated_data": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "blocked"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "usage": {
+            "properties": {
+              "research": {
+                "const": false
+              },
+              "contrast": {
+                "const": false
+              },
+              "local_validation": {
+                "const": false
+              },
+              "candidate_generation": {
+                "const": false
+              },
+              "generated_data": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

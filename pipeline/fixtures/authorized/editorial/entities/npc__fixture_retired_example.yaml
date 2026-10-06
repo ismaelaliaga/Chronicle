@@ -1,0 +1,11 @@
+schema: "chronicle.editorial.entity/1"
+id: "npc:fixture_retired_example"
+type: npc
+status: retired
+located_in: "subzone:fixture_hollow"
+applies_to: []
+retired:
+  reason: "Fixture: entidad retirada para probar que el Registry la sigue conociendo."
+  since: "2026-10"
+  superseded_by: "npc:fixture_example_keeper"
+editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }

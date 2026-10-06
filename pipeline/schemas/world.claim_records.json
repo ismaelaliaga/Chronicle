@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.claim_records.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.claim_records/1"
+    },
+    "source": {
+      "$ref": "common.json#/$defs/SourceId"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "flavor": {
+            "$ref": "common.json#/$defs/FlavorId"
+          },
+          "subject": {
+            "$ref": "common.json#/$defs/WorldRef"
+          },
+          "field": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(exists|names\\.[a-z]{2}[A-Z]{2}|subnames\\.[a-z]{2}[A-Z]{2}|attributes\\.(npc_flags|rank|level_min|level_max|faction_template|creature_type|display_id)|relations\\.[a-z_]+|spawns|places|texts\\.[a-z]{2}[A-Z]{2}\\.(zone_text|subzone_text))$"
+          },
+          "value": {},
+          "confidence": {
+            "$ref": "common.json#/$defs/Confidence"
+          },
+          "provenance": {
+            "$ref": "common.json#/$defs/ProvenanceNoSource"
+          }
+        },
+        "required": [
+          "flavor",
+          "subject",
+          "field",
+          "value",
+          "confidence",
+          "provenance"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema",
+    "source",
+    "records"
+  ],
+  "title": "Registros crudos de una fuente (salida de un importador)"
+}

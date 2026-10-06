@@ -1,0 +1,28 @@
+{
+  "exists": {
+    "claims": [
+      {
+        "confidence": "client_verified",
+        "provenance": {
+          "client_build": "fixture-0",
+          "locator": "fixture sintetico",
+          "method": "capture",
+          "source": "fixture_client_capture",
+          "source_version": "fixture build"
+        },
+        "value": "present"
+      }
+    ],
+    "resolved": {
+      "rule": "single_claim",
+      "status": "resolved",
+      "value": "present"
+    }
+  },
+  "ref": {
+    "flavor": "era",
+    "id": 90006,
+    "kind": "creature"
+  },
+  "schema": "chronicle.world.entity/1"
+}

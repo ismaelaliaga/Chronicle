@@ -1,0 +1,38 @@
+{
+  "blocks_publish": true,
+  "claims": [
+    {
+      "confidence": "source_reported",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source": "fixture_source_a",
+        "source_version": "fixture"
+      },
+      "value": "Fixture Conflicted A"
+    },
+    {
+      "confidence": "source_reported",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source": "fixture_source_b",
+        "source_version": "fixture"
+      },
+      "value": "Fixture Conflicted B"
+    }
+  ],
+  "class": "identity",
+  "field": "names.enUS",
+  "fingerprint": "sha256:76a5490946872230ef74e7c81f5c2c7070d7cb3fb74e6ab88af98b033f66eba4",
+  "id": "conf:7fa26622afa68fe1",
+  "schema": "chronicle.world.conflict/1",
+  "scope": "world",
+  "severity": "high",
+  "status": "open",
+  "subject": {
+    "flavor": "era",
+    "id": 90005,
+    "kind": "creature"
+  }
+}

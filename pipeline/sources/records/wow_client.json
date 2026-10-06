@@ -1,0 +1,57 @@
+{
+  "records": [
+    {
+      "confidence": "client_verified",
+      "field": "exists",
+      "flavor": "era",
+      "provenance": {
+        "by": "supervisor",
+        "locator": "Fase 14: descubierto por GUID en el cliente real",
+        "method": "manual",
+        "source_version": "Classic Era (build no registrado)"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 786,
+        "kind": "creature"
+      },
+      "value": "present"
+    },
+    {
+      "confidence": "client_verified",
+      "field": "exists",
+      "flavor": "era",
+      "provenance": {
+        "by": "supervisor",
+        "locator": "Fase 14: descubierto por GUID en el cliente real",
+        "method": "manual",
+        "source_version": "Classic Era (build no registrado)"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 658,
+        "kind": "creature"
+      },
+      "value": "present"
+    },
+    {
+      "confidence": "client_verified",
+      "field": "texts.esES.subzone_text",
+      "flavor": "era",
+      "provenance": {
+        "by": "supervisor",
+        "locator": "/chronicle where en Coldridge Valley (Fase 14)",
+        "method": "manual",
+        "source_version": "Classic Era (build no registrado)"
+      },
+      "subject": {
+        "flavor": "era",
+        "key": "valle de crestanevada",
+        "kind": "name_only"
+      },
+      "value": "Valle de Crestanevada"
+    }
+  ],
+  "schema": "chronicle.world.claim_records/1",
+  "source": "wow_client"
+}

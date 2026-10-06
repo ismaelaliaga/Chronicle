@@ -1,0 +1,7 @@
+schema: "chronicle.editorial.binding/1"
+entity: "npc:fixture_example_keeper"
+flavor: era
+status: accepted
+tech_refs:
+  - { flavor: era, kind: creature, id: 90001 }
+attested: { by: "fixture", method: manual_review, at: "2026-10" }

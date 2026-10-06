@@ -1,0 +1,69 @@
+{
+  "attributes": {
+    "display_id": {
+      "claims": [
+        {
+          "confidence": "source_reported",
+          "provenance": {
+            "locator": "fixture sintetico",
+            "method": "import",
+            "source": "fixture_authorized_source",
+            "source_version": "fixture"
+          },
+          "value": 99001
+        }
+      ],
+      "resolved": {
+        "rule": "single_claim",
+        "status": "resolved",
+        "value": 99001
+      }
+    }
+  },
+  "exists": {
+    "claims": [
+      {
+        "confidence": "source_reported",
+        "provenance": {
+          "locator": "fixture sintetico",
+          "method": "import",
+          "source": "fixture_authorized_source",
+          "source_version": "fixture"
+        },
+        "value": "present"
+      }
+    ],
+    "resolved": {
+      "rule": "single_claim",
+      "status": "resolved",
+      "value": "present"
+    }
+  },
+  "names": {
+    "enUS": {
+      "claims": [
+        {
+          "confidence": "source_reported",
+          "provenance": {
+            "locator": "fixture sintetico",
+            "method": "import",
+            "source": "fixture_authorized_source",
+            "source_version": "fixture"
+          },
+          "value": "Fixture Keeper"
+        }
+      ],
+      "resolved": {
+        "rule": "single_claim",
+        "status": "resolved",
+        "value": "Fixture Keeper"
+      }
+    }
+  },
+  "ref": {
+    "flavor": "era",
+    "id": 90001,
+    "kind": "creature"
+  },
+  "schema": "chronicle.world.entity/1"
+}

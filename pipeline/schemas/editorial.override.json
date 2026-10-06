@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/editorial.override.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.editorial.override/1"
+    },
+    "id": {
+      "$ref": "common.json#/$defs/OverrideId"
+    },
+    "target": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "conflict": {
+              "$ref": "common.json#/$defs/ConflictId"
+            }
+          },
+          "required": [
+            "conflict"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "subject": {
+              "$ref": "common.json#/$defs/WorldRef"
+            },
+            "field": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "subject",
+            "field"
+          ]
+        }
+      ]
+    },
+    "decision": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "set_value": {}
+          },
+          "required": [
+            "set_value"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "prefer_claim": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "common.json#/$defs/SourceId"
+                },
+                "source_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "method": {
+                  "enum": [
+                    "import",
+                    "capture",
+                    "manual",
+                    "derived"
+                  ]
+                }
+              },
+              "required": [
+                "source",
+                "source_version",
+                "method"
+              ]
+            }
+          },
+          "required": [
+            "prefer_claim"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reject_claim": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "$ref": "common.json#/$defs/SourceId"
+                },
+                "source_version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "method": {
+                  "enum": [
+                    "import",
+                    "capture",
+                    "manual",
+                    "derived"
+                  ]
+                }
+              },
+              "required": [
+                "source",
+                "source_version",
+                "method"
+              ]
+            }
+          },
+          "required": [
+            "reject_claim"
+          ]
+        }
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/ObservationId"
+      }
+    },
+    "bound_to_fingerprint": {
+      "$ref": "common.json#/$defs/Fingerprint"
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewed_at": {
+      "$ref": "common.json#/$defs/DateText"
+    },
+    "created_at": {
+      "$ref": "common.json#/$defs/DateText"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "target",
+    "decision",
+    "reason",
+    "bound_to_fingerprint",
+    "author",
+    "created_at"
+  ],
+  "title": "Override de conflicto de World Data (Fase 16, 7.8)"
+}

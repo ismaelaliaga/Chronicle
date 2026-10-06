@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/editorial.hint.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.editorial.hint/1"
+    },
+    "id": {
+      "$ref": "common.json#/$defs/HintId"
+    },
+    "target": {
+      "$ref": "common.json#/$defs/ChronicleId"
+    },
+    "kind": {
+      "enum": [
+        "narrative",
+        "contextual"
+      ]
+    },
+    "necessity": {
+      "enum": [
+        "required",
+        "optional"
+      ]
+    },
+    "tier": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "reveals_when": {
+      "$ref": "#/$defs/Requirement"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/HintId"
+      },
+      "uniqueItems": true
+    },
+    "related_to": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/ChronicleId"
+      },
+      "uniqueItems": true
+    },
+    "text": {
+      "$ref": "common.json#/$defs/HintId"
+    },
+    "applies_to": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/FlavorId"
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "review",
+        "published",
+        "retired"
+      ]
+    },
+    "editorial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewed_at": {
+          "$ref": "common.json#/$defs/DateText"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "author"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "target",
+    "kind",
+    "necessity",
+    "tier",
+    "text",
+    "status",
+    "editorial"
+  ],
+  "title": "Pista estructurada (Fase 16, 7.5)",
+  "$defs": {
+    "Requirement": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "place_discovered": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "$ref": "common.json#/$defs/ChronicleId"
+                },
+                "strict": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "required": [
+            "place_discovered"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "entity_discovered": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "$ref": "common.json#/$defs/ChronicleId"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "required": [
+            "entity_discovered"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hint_seen": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "$ref": "common.json#/$defs/HintId"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "required": [
+            "hint_seen"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Requirement"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "all"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Requirement"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "any"
+          ]
+        }
+      ]
+    }
+  }
+}

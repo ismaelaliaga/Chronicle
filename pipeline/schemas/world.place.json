@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.place.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.place/1"
+    },
+    "ref": {
+      "oneOf": [
+        {
+          "$ref": "common.json#/$defs/NameOnlyRef"
+        },
+        {
+          "$ref": "common.json#/$defs/TechRef"
+        }
+      ]
+    },
+    "identity_quality": {
+      "enum": [
+        "name_only",
+        "verified"
+      ]
+    },
+    "texts": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z]{2}[A-Z]{2}$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "zone_text": {
+              "$ref": "common.json#/$defs/Field_String"
+            },
+            "subzone_text": {
+              "$ref": "common.json#/$defs/Field_String"
+            }
+          },
+          "required": [],
+          "minProperties": 1
+        }
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "ref",
+    "identity_quality",
+    "texts"
+  ],
+  "title": "Lugar del mundo normalizado (Fase 16, 5.5)",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ref": {
+            "properties": {
+              "kind": {
+                "const": "name_only"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "identity_quality": {
+            "const": "name_only"
+          }
+        }
+      }
+    }
+  ]
+}

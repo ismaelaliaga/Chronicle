@@ -1,0 +1,214 @@
+{
+  "records": [
+    {
+      "confidence": "source_reported",
+      "field": "exists",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90001,
+        "kind": "creature"
+      },
+      "value": "present"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "names.enUS",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90001,
+        "kind": "creature"
+      },
+      "value": "Fixture Keeper"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "attributes.display_id",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90001,
+        "kind": "creature"
+      },
+      "value": 99001
+    },
+    {
+      "confidence": "source_reported",
+      "field": "exists",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90004,
+        "kind": "creature"
+      },
+      "value": "present"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "names.enUS",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90004,
+        "kind": "creature"
+      },
+      "value": "Fixture Elder"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "exists",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90005,
+        "kind": "creature"
+      },
+      "value": "present"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "texts.esES.zone_text",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "key": "fixture land",
+        "kind": "name_only"
+      },
+      "value": "Fixture Land"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "texts.esES.subzone_text",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "key": "fixture hollow",
+        "kind": "name_only"
+      },
+      "value": "Fixture Hollow"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "exists",
+      "flavor": "fixture_alt",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "fixture_alt",
+        "id": 90002,
+        "kind": "creature"
+      },
+      "value": "present"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "names.enUS",
+      "flavor": "fixture_alt",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "fixture_alt",
+        "id": 90002,
+        "kind": "creature"
+      },
+      "value": "Fixture Keeper Alt"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "exists",
+      "flavor": "fixture_alt",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "fixture_alt",
+        "id": 90008,
+        "kind": "creature"
+      },
+      "value": "present"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "texts.esES.zone_text",
+      "flavor": "fixture_alt",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "fixture_alt",
+        "key": "fixture land",
+        "kind": "name_only"
+      },
+      "value": "Fixture Land"
+    },
+    {
+      "confidence": "source_reported",
+      "field": "texts.esES.subzone_text",
+      "flavor": "fixture_alt",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "fixture_alt",
+        "key": "fixture hollow",
+        "kind": "name_only"
+      },
+      "value": "Fixture Hollow"
+    }
+  ],
+  "schema": "chronicle.world.claim_records/1",
+  "source": "fixture_authorized_source"
+}

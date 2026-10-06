@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.entity/1"
+id: "subzone:fixture_hollow"
+type: subzone
+status: published
+parent: "zone:fixture_land"
+applies_to: [era, fixture_alt]
+discovery: { method: place_enter }
+editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }

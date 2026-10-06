@@ -30,6 +30,8 @@ Services/Resolver.lua
 Services/Discovery.lua
 Services/MapPosition.lua
 Services/Proximity.lua
+Services/EraAdapter.lua
+Services/ClientAdapter.lua
 Services/ZoneDiscovery.lua
 Services/NpcDiscovery.lua
 Services/Trivia.lua

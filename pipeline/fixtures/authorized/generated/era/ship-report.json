@@ -1,0 +1,111 @@
+{
+  "entries": [
+    {
+      "authorized_by": [],
+      "available": true,
+      "details": [],
+      "entity": "continent:fixture_world",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [
+        {
+          "blocked_because": "conflicto open (identity, high) en names.enUS",
+          "claims_from": [
+            "fixture_source_a",
+            "fixture_source_b"
+          ],
+          "datum": "conflict:conf:7fa26622afa68fe1"
+        }
+      ],
+      "entity": "npc:fixture_conflicted_example",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [
+        "blocked_by_conflict"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [
+        "fixture_authorized_source"
+      ],
+      "available": true,
+      "details": [],
+      "entity": "npc:fixture_example_elder",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [
+        "fixture_authorized_source"
+      ],
+      "available": true,
+      "details": [],
+      "entity": "npc:fixture_example_keeper",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [
+        {
+          "blocked_because": "usage.generated_data = false",
+          "claims_from": [
+            "fixture_client_capture"
+          ],
+          "datum": "exists"
+        }
+      ],
+      "entity": "npc:fixture_unauthorized_example",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [
+        "source_not_authorized_for_pack"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [
+        "fixture_authorized_source"
+      ],
+      "available": true,
+      "details": [],
+      "entity": "subzone:fixture_hollow",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [
+        "fixture_authorized_source"
+      ],
+      "available": true,
+      "details": [],
+      "entity": "zone:fixture_land",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    }
+  ],
+  "flavor": "era",
+  "policy": {
+    "authorized_sources": [
+      "fixture_authorized_source"
+    ],
+    "capability_policy": "block"
+  },
+  "schema": "chronicle.report.ship/1"
+}

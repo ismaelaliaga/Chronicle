@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/editorial.vocab.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.editorial.vocab/1"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z0-9_]+$"
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema",
+    "categories"
+  ],
+  "title": "Vocabularios controlados (Fase 16, 7.1)"
+}

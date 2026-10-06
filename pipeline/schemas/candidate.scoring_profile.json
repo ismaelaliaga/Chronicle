@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/candidate.scoring_profile.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.candidate.scoring_profile/1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "flavors": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/FlavorId"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "weight",
+          "enabled"
+        ]
+      },
+      "minItems": 1
+    },
+    "queue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_score": {
+          "type": "number"
+        },
+        "max_items": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": []
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reference_positive": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/TechRef"
+          }
+        },
+        "reference_negative": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/TechRef"
+          }
+        },
+        "attested_by": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "notes",
+        "attested_by"
+      ]
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "version",
+    "flavors",
+    "signals",
+    "author"
+  ],
+  "title": "Perfil de puntuación (Fase 16, 6.2)"
+}

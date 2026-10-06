@@ -1,0 +1,11 @@
+schema: "chronicle.editorial.entity/1"
+id: "npc:fixture_example_elder"
+type: npc
+status: published
+importance: major
+located_in: "subzone:fixture_hollow"
+applies_to: [era, fixture_alt]
+discovery:
+  method: interaction
+  interaction: { type: gossip }
+editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }

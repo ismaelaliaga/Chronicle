@@ -1,0 +1,9 @@
+schema: "chronicle.candidate.signal/1"
+id: quest_relevance
+description: "Fixture: relevancia por misiones (valores ilustrativos)."
+inputs: ["relations.quest_starts", "relations.quest_ends"]
+type: count
+extractor_version: 1
+polarity: positive
+normalization: { kind: cap, cap: 10 }
+needs: ["relations.quest_starts"]

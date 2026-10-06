@@ -1,0 +1,36 @@
+{
+  "client": {
+    "interface": [
+      11507
+    ]
+  },
+  "content_revision": "sha256:4a640326192e6bf211bba13ba40dd75ef5ab9cd3867db406d85115567752b95a",
+  "counts": {
+    "available": 5,
+    "entities": 7,
+    "hints": 2,
+    "published": 7,
+    "retired": 1
+  },
+  "features": {
+    "persist_hints": false,
+    "persist_interaction_progress": false
+  },
+  "files": [
+    {
+      "path": "Pack.lua",
+      "sha256": "f6ff5d8a6f6433b1ab4ec933ccce378fcce14e5e36558fd1e510055017f767ad"
+    }
+  ],
+  "flavor": "era",
+  "generated_from": {
+    "editorial": "sha256:36d37381a502502078c0d3322185311247e1c2444bbb6b7f84d58b831c8991d0",
+    "generator": "0.1.0",
+    "world": "sha256:2c6a655cfa03f5ec980c296ed4efec14992895f89f9068771020862cb306fb06"
+  },
+  "locales": [
+    "esES"
+  ],
+  "pack_schema": 1,
+  "schema": "chronicle.pack.manifest/1"
+}

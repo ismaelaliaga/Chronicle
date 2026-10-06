@@ -1,0 +1,94 @@
+{
+  "entries": [
+    {
+      "authorized_by": [],
+      "available": true,
+      "details": [],
+      "entity": "continent:fixture_world",
+      "flavor": "fixture_alt",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [],
+      "entity": "npc:fixture_conflicted_example",
+      "flavor": "fixture_alt",
+      "omitted_optional": [],
+      "reasons": [
+        "not_applicable"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [
+        "fixture_authorized_source"
+      ],
+      "available": true,
+      "details": [],
+      "entity": "npc:fixture_example_elder",
+      "flavor": "fixture_alt",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [],
+      "entity": "npc:fixture_example_keeper",
+      "flavor": "fixture_alt",
+      "omitted_optional": [],
+      "reasons": [
+        "capability_unverified:interaction.quest"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [],
+      "entity": "npc:fixture_unauthorized_example",
+      "flavor": "fixture_alt",
+      "omitted_optional": [],
+      "reasons": [
+        "not_applicable"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [
+        "fixture_authorized_source"
+      ],
+      "available": true,
+      "details": [],
+      "entity": "subzone:fixture_hollow",
+      "flavor": "fixture_alt",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [
+        "fixture_authorized_source"
+      ],
+      "available": true,
+      "details": [],
+      "entity": "zone:fixture_land",
+      "flavor": "fixture_alt",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    }
+  ],
+  "flavor": "fixture_alt",
+  "policy": {
+    "authorized_sources": [
+      "fixture_authorized_source"
+    ],
+    "capability_policy": "block"
+  },
+  "schema": "chronicle.report.ship/1"
+}

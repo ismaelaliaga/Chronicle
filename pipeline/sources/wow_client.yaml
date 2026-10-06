@@ -1,0 +1,16 @@
+schema: "chronicle.world.source/1"
+id: wow_client
+name: "Observaciones del cliente real (captura propia)"
+kind: client_capture
+origin_group: wow_client
+trust_tier: 2
+applicable_flavors: [era, forever]
+obtained: { method: capture, version: "por build", retrieved_at: null }
+license:
+  status: unknown
+  summary: "Observaciones de nuestro propio cliente; el contenido del juego es de Blizzard (politica de addons no revisada)."
+  redistribution: unknown
+  derived_data: unknown
+usage: { research: true, contrast: true, local_validation: true, candidate_generation: true, generated_data: false }
+status: active
+notes: "usage.generated_data = false mientras la licencia de Chronicle (D8) siga PENDING_OWNER_DECISION."

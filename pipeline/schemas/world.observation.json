@@ -1,0 +1,469 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.observation.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.observation/1"
+    },
+    "id": {
+      "$ref": "common.json#/$defs/ObservationId"
+    },
+    "flavor": {
+      "$ref": "common.json#/$defs/FlavorId"
+    },
+    "locale": {
+      "$ref": "common.json#/$defs/Locale"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "build": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interface": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signals": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "integer",
+              "boolean",
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "required": [
+        "build",
+        "interface",
+        "signals"
+      ]
+    },
+    "captured_with": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "tool",
+        "version"
+      ]
+    },
+    "observed_at": {
+      "$ref": "common.json#/$defs/DateText"
+    },
+    "restricted_context": {
+      "type": "boolean"
+    },
+    "diagnostic": {
+      "type": "boolean"
+    },
+    "kind": {
+      "enum": [
+        "unit",
+        "place",
+        "interaction",
+        "capability_probe"
+      ]
+    },
+    "payload": {}
+  },
+  "required": [
+    "schema",
+    "id",
+    "flavor",
+    "locale",
+    "client",
+    "captured_with",
+    "observed_at",
+    "restricted_context",
+    "kind",
+    "payload"
+  ],
+  "title": "Observación del cliente real (Fase 16, 5.3)",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "unit"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "unit_type": {
+                "enum": [
+                  "creature",
+                  "pet",
+                  "player",
+                  "other",
+                  "unavailable"
+                ]
+              },
+              "npc_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "subname": {
+                "type": "string",
+                "minLength": 1
+              },
+              "secret": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "unit_type",
+              "secret"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "unit_type": {
+                      "const": "player"
+                    }
+                  },
+                  "required": [
+                    "unit_type"
+                  ]
+                },
+                "then": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "subname"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "npc_id"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "secret": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "secret"
+                  ]
+                },
+                "then": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "name"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "subname"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "npc_id"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "place"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "zone_text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "subzone_text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ui_map_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "area_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "player_position": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "map": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "map",
+                  "x",
+                  "y"
+                ]
+              }
+            },
+            "required": [],
+            "minProperties": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "interaction"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "unit": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "unit_type": {
+                    "enum": [
+                      "creature",
+                      "pet",
+                      "player",
+                      "other",
+                      "unavailable"
+                    ]
+                  },
+                  "npc_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "subname": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "secret": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "unit_type",
+                  "secret"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "unit_type": {
+                          "const": "player"
+                        }
+                      },
+                      "required": [
+                        "unit_type"
+                      ]
+                    },
+                    "then": {
+                      "not": {
+                        "anyOf": [
+                          {
+                            "required": [
+                              "name"
+                            ]
+                          },
+                          {
+                            "required": [
+                              "subname"
+                            ]
+                          },
+                          {
+                            "required": [
+                              "npc_id"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "secret": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "secret"
+                      ]
+                    },
+                    "then": {
+                      "not": {
+                        "anyOf": [
+                          {
+                            "required": [
+                              "name"
+                            ]
+                          },
+                          {
+                            "required": [
+                              "subname"
+                            ]
+                          },
+                          {
+                            "required": [
+                              "npc_id"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "raw_event": {
+                "type": "string",
+                "minLength": 1
+              },
+              "unit_token": {
+                "type": "string",
+                "minLength": 1
+              },
+              "interaction_hint": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "unit",
+              "raw_event",
+              "unit_token"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "capability_probe"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "capability": {
+                "$ref": "common.json#/$defs/CapabilityId"
+              },
+              "result": {
+                "enum": [
+                  "available",
+                  "unavailable",
+                  "restricted",
+                  "error"
+                ]
+              },
+              "detail": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "capability",
+              "result"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+schema: "chronicle.editorial.hint/1"
+id: "hint:fixture_elder_1"
+target: "npc:fixture_example_elder"
+kind: narrative
+necessity: required
+tier: 1
+reveals_when:
+  place_discovered: { id: "zone:fixture_land" }
+text: "hint:fixture_elder_1"
+status: published
+editorial: { author: "fixture" }

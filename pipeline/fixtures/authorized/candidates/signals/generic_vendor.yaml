@@ -1,0 +1,9 @@
+schema: "chronicle.candidate.signal/1"
+id: generic_vendor
+description: "Fixture: penalizacion por vendedor generico (valores ilustrativos)."
+inputs: ["attributes.npc_flags"]
+type: bool
+extractor_version: 1
+polarity: negative
+normalization: { kind: none }
+needs: ["attributes.npc_flags"]

@@ -1,0 +1,9 @@
+schema: "chronicle.editorial.entity/1"
+id: "subzone:coldridge_valley"
+type: subzone
+status: published
+importance: standard
+parent: "zone:dun_morogh"
+applies_to: [era]
+discovery: { method: place_enter }
+editorial: { author: "fase17_bootstrap", notes: "Marcador de infraestructura (Fase 17): importancia, tipo de interaccion y pistas pendientes de decision editorial." }

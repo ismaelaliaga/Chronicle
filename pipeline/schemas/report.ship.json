@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/report.ship.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.report.ship/1"
+    },
+    "flavor": {
+      "$ref": "common.json#/$defs/FlavorId"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capability_policy": {
+          "enum": [
+            "block",
+            "warn"
+          ]
+        },
+        "authorized_sources": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/SourceId"
+          }
+        }
+      },
+      "required": [
+        "capability_policy",
+        "authorized_sources"
+      ]
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entity": {
+            "$ref": "common.json#/$defs/ChronicleId"
+          },
+          "flavor": {
+            "$ref": "common.json#/$defs/FlavorId"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^(not_applicable|no_binding|tech_ref_missing|entity_absent|source_not_authorized_for_pack|capability_unavailable|capability_unverified|blocked_by_conflict|reference_not_shipped)(:[a-z_.]+)?$"
+            }
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "datum": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "claims_from": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "common.json#/$defs/SourceId"
+                  }
+                },
+                "blocked_because": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "datum",
+                "claims_from",
+                "blocked_because"
+              ]
+            }
+          },
+          "omitted_optional": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "datum": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "claims_from": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "common.json#/$defs/SourceId"
+                  }
+                },
+                "blocked_because": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "datum",
+                "claims_from",
+                "blocked_because"
+              ]
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^(not_applicable|no_binding|tech_ref_missing|entity_absent|source_not_authorized_for_pack|capability_unavailable|capability_unverified|blocked_by_conflict|reference_not_shipped)(:[a-z_.]+)?$"
+            }
+          },
+          "authorized_by": {
+            "type": "array",
+            "items": {
+              "$ref": "common.json#/$defs/SourceId"
+            }
+          }
+        },
+        "required": [
+          "entity",
+          "flavor",
+          "available",
+          "reasons",
+          "details",
+          "omitted_optional",
+          "warnings",
+          "authorized_by"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "flavor",
+    "policy",
+    "entries"
+  ],
+  "title": "Informe de publicación (Fase 16, 9.2). Sin marcas de tiempo"
+}

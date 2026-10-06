@@ -1,0 +1,17 @@
+schema: "chronicle.pipeline.flavors/1"
+editorial_locale: esES
+flavors:
+  era:
+    enabled: true
+    interface: [11507]
+    locales: [esES]
+    features: { persist_hints: false, persist_interaction_progress: false }
+    capability_policy: block
+    notes: "Classic Era. Interface informativo (el del .toc actual); D11 pendiente de verificacion en cliente. capability_policy=block: politica estricta (P10 pendiente)."
+  forever:
+    enabled: false
+    interface: []
+    locales: [esES]
+    features: { persist_hints: false, persist_interaction_progress: false }
+    capability_policy: block
+    notes: "Sin cliente verificable: NO se genera nada. Sin datos ni suposiciones (Fase 15.1)."

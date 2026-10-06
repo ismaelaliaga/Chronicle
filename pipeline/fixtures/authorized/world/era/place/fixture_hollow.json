@@ -1,0 +1,32 @@
+{
+  "identity_quality": "name_only",
+  "ref": {
+    "flavor": "era",
+    "key": "fixture hollow",
+    "kind": "name_only"
+  },
+  "schema": "chronicle.world.place/1",
+  "texts": {
+    "esES": {
+      "subzone_text": {
+        "claims": [
+          {
+            "confidence": "source_reported",
+            "provenance": {
+              "locator": "fixture sintetico",
+              "method": "import",
+              "source": "fixture_authorized_source",
+              "source_version": "fixture"
+            },
+            "value": "Fixture Hollow"
+          }
+        ],
+        "resolved": {
+          "rule": "single_claim",
+          "status": "resolved",
+          "value": "Fixture Hollow"
+        }
+      }
+    }
+  }
+}

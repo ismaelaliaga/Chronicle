@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.binding/1"
+entity: "subzone:coldridge_valley"
+flavor: era
+status: accepted
+places:
+  - { locale: esES, api: subzone_text, string: "Valle de Crestanevada", evidence: [], confidence: client_verified }
+attested: { by: "supervisor", method: manual_review, at: "2026-10" }
+notes: "Cadena observada con /chronicle where (Fase 14). Este binding NO concede autorizacion para el pack."

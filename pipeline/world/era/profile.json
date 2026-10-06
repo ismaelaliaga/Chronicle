@@ -1,0 +1,37 @@
+{
+  "build": "unregistered",
+  "capabilities": {
+    "interaction.gossip": {
+      "evidence": [],
+      "status": "unverified"
+    },
+    "interaction.quest": {
+      "evidence": [],
+      "status": "unverified"
+    },
+    "place.subzone_text": {
+      "evidence": [],
+      "status": "unverified"
+    },
+    "place.zone_text": {
+      "evidence": [],
+      "status": "unverified"
+    },
+    "unit_identity.mouseover": {
+      "evidence": [],
+      "status": "unverified"
+    },
+    "unit_identity.nameplate": {
+      "evidence": [],
+      "status": "unverified"
+    },
+    "unit_identity.target": {
+      "evidence": [],
+      "status": "unverified"
+    }
+  },
+  "flavor": "era",
+  "interface": "unregistered",
+  "schema": "chronicle.world.client_profile/1",
+  "signals": {}
+}

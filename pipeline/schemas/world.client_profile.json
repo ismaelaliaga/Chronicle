@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.client_profile.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.client_profile/1"
+    },
+    "flavor": {
+      "$ref": "common.json#/$defs/FlavorId"
+    },
+    "build": {
+      "type": "string",
+      "minLength": 1
+    },
+    "interface": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "signals": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "integer",
+          "boolean",
+          "number",
+          "null"
+        ]
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z_]+(\\.[a-z_]+)+$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "verified",
+                "unverified",
+                "unavailable",
+                "restricted"
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "common.json#/$defs/ObservationId"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "status": {
+                    "const": "verified"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "evidence": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "flavor",
+    "build",
+    "interface",
+    "signals",
+    "capabilities"
+  ],
+  "title": "Perfil de cliente (Fase 16, 5.6)"
+}

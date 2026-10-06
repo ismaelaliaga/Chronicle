@@ -1,0 +1,17 @@
+schema: "chronicle.pipeline.flavors/1"
+editorial_locale: esES
+flavors:
+  era:
+    enabled: true
+    interface: [11507]
+    locales: [esES]
+    features: { persist_hints: false, persist_interaction_progress: false }
+    capability_policy: block
+    notes: "FIXTURE SINTETICO: todos los datos son inventados. No son datos de WoW."
+  fixture_alt:
+    enabled: true
+    interface: []
+    locales: [esES]
+    features: { persist_hints: false, persist_interaction_progress: false }
+    capability_policy: block
+    notes: "FIXTURE SINTETICO: segundo flavor ficticio (NO es Forever). Todos los datos son inventados."

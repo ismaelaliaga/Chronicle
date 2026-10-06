@@ -1,0 +1,13 @@
+schema: "chronicle.editorial.hint/1"
+id: "hint:fixture_keeper_1"
+target: "npc:fixture_example_keeper"
+kind: contextual
+necessity: optional
+tier: 2
+depends_on: ["hint:fixture_elder_1"]
+reveals_when:
+  entity_discovered: { id: "npc:fixture_example_elder" }
+related_to: ["npc:fixture_example_elder"]
+text: "hint:fixture_keeper_1"
+status: published
+editorial: { author: "fixture" }

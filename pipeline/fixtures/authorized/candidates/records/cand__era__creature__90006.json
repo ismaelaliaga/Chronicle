@@ -1,0 +1,48 @@
+{
+  "data_gaps": [
+    "lore_relation"
+  ],
+  "display": {
+    "names": {
+      "enUS": "Fixture Vendor"
+    }
+  },
+  "flags": [
+    "data_gap"
+  ],
+  "flavor": "era",
+  "id": "cand:era:creature:90006",
+  "inputs_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "profile": {
+    "id": "dun_morogh_pilot",
+    "version": 1
+  },
+  "rank": 1,
+  "schema": "chronicle.candidate.record/1",
+  "score": {
+    "total": -40
+  },
+  "signals": [
+    {
+      "contribution": 0,
+      "evidence": [],
+      "id": "quest_relevance",
+      "normalized": 0,
+      "raw": 0,
+      "weight": 30
+    },
+    {
+      "contribution": -40,
+      "evidence": [],
+      "id": "generic_vendor",
+      "normalized": 1,
+      "raw": 1,
+      "weight": -40
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 90006,
+    "kind": "creature"
+  }
+}

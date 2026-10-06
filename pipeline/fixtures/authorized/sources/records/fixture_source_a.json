@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "confidence": "source_reported",
+      "field": "names.enUS",
+      "flavor": "era",
+      "provenance": {
+        "locator": "fixture sintetico",
+        "method": "import",
+        "source_version": "fixture"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90005,
+        "kind": "creature"
+      },
+      "value": "Fixture Conflicted A"
+    }
+  ],
+  "schema": "chronicle.world.claim_records/1",
+  "source": "fixture_source_a"
+}

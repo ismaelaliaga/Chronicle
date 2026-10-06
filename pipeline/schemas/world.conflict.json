@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.conflict.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.conflict/1"
+    },
+    "id": {
+      "$ref": "common.json#/$defs/ConflictId"
+    },
+    "scope": {
+      "enum": [
+        "world",
+        "binding"
+      ]
+    },
+    "class": {
+      "enum": [
+        "identity",
+        "existence",
+        "location",
+        "name_locale",
+        "duplicate_tech",
+        "drift",
+        "binding_identity_mismatch",
+        "binding_unavailable",
+        "duplicate_binding",
+        "capability_gap"
+      ]
+    },
+    "severity": {
+      "enum": [
+        "blocking",
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "status": {
+      "enum": [
+        "open",
+        "overridden",
+        "accepted",
+        "wontfix",
+        "stale"
+      ]
+    },
+    "subject": {
+      "oneOf": [
+        {
+          "$ref": "common.json#/$defs/WorldRef"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "entity": {
+              "$ref": "common.json#/$defs/ChronicleId"
+            },
+            "flavor": {
+              "$ref": "common.json#/$defs/FlavorId"
+            }
+          },
+          "required": [
+            "entity",
+            "flavor"
+          ]
+        }
+      ]
+    },
+    "field": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {},
+          "provenance": {
+            "$ref": "common.json#/$defs/Provenance"
+          },
+          "confidence": {
+            "$ref": "common.json#/$defs/Confidence"
+          }
+        },
+        "required": [
+          "value",
+          "provenance",
+          "confidence"
+        ]
+      }
+    },
+    "fingerprint": {
+      "$ref": "common.json#/$defs/Fingerprint"
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "chose_claim",
+            "override",
+            "accepted",
+            "wontfix"
+          ]
+        },
+        "override": {
+          "$ref": "common.json#/$defs/OverrideId"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "by": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "reason",
+        "by"
+      ]
+    },
+    "blocks_publish": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "scope",
+    "class",
+    "severity",
+    "status",
+    "subject",
+    "fingerprint",
+    "blocks_publish"
+  ],
+  "title": "Conflicto (Fase 16, 5.7)",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "scope": {
+            "const": "world"
+          }
+        },
+        "required": [
+          "scope"
+        ]
+      },
+      "then": {
+        "required": [
+          "claims",
+          "field"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "not": {
+              "const": "open"
+            }
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "resolution"
+        ]
+      }
+    }
+  ]
+}

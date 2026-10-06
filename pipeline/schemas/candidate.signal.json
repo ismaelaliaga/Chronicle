@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/candidate.signal.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.candidate.signal/1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "type": {
+      "enum": [
+        "count",
+        "bool",
+        "ratio",
+        "text_match"
+      ]
+    },
+    "extractor_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "polarity": {
+      "enum": [
+        "positive",
+        "negative"
+      ]
+    },
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "none",
+            "cap",
+            "log"
+          ]
+        },
+        "cap": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "needs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "description",
+    "inputs",
+    "type",
+    "extractor_version",
+    "polarity",
+    "normalization",
+    "needs"
+  ],
+  "title": "Definición de señal (Fase 16, 6.2)"
+}

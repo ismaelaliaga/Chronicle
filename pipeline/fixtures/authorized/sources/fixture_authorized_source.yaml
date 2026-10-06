@@ -1,0 +1,12 @@
+schema: "chronicle.world.source/1"
+id: fixture_authorized_source
+name: "Fuente sintetica AUTORIZADA (fixture)"
+kind: other
+origin_group: fixture_authorized_source
+trust_tier: 6
+applicable_flavors: [era, fixture_alt]
+obtained: { method: manual_download, version: "fixture" }
+license: { status: known, summary: "Fixture sintetico.", redistribution: allowed, derived_data: allowed }
+usage: { research: true, contrast: true, local_validation: true, candidate_generation: true, generated_data: true }
+owner_approval: { by: "fixture", scope: "solo fixtures; no es una aprobacion real" }
+status: active

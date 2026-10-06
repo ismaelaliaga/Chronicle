@@ -1,0 +1,12 @@
+schema: "chronicle.editorial.entity/1"
+id: "npc:sten_stoutarm"
+type: npc
+status: published
+importance: standard
+located_in: "subzone:coldridge_valley"
+applies_to: [era]
+requires_hint: false
+discovery:
+  method: interaction
+  interaction: { type: gossip }
+editorial: { author: "fase17_bootstrap", notes: "Marcador de infraestructura (Fase 17): importancia, tipo de interaccion y pistas pendientes de decision editorial." }

@@ -1,0 +1,7 @@
+schema: "chronicle.editorial.binding/1"
+entity: "subzone:fixture_hollow"
+flavor: fixture_alt
+status: accepted
+places:
+  - { locale: esES, api: subzone_text, string: "Fixture Hollow", evidence: [], confidence: source_reported }
+attested: { by: "fixture", method: manual_review, at: "2026-10" }

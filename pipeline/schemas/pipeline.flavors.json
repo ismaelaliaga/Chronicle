@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/pipeline.flavors.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.pipeline.flavors/1"
+    },
+    "editorial_locale": {
+      "$ref": "common.json#/$defs/Locale"
+    },
+    "flavors": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "interface": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "uniqueItems": true
+            },
+            "locales": {
+              "type": "array",
+              "items": {
+                "$ref": "common.json#/$defs/Locale"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "features": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "persist_hints": {
+                  "type": "boolean"
+                },
+                "persist_interaction_progress": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "persist_hints",
+                "persist_interaction_progress"
+              ]
+            },
+            "capability_policy": {
+              "enum": [
+                "block",
+                "warn"
+              ]
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "enabled",
+            "interface",
+            "locales",
+            "features",
+            "capability_policy"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "editorial_locale",
+    "flavors"
+  ],
+  "title": "Configuración de versiones del juego (entrada de la cabecera del pack, Fase 16, 8.2)"
+}

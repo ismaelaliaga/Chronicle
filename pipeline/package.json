@@ -1,0 +1,26 @@
+{
+  "name": "chronicle-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pipeline de datos de Chronicle (herramienta de desarrollo; NO forma parte del addon ni de su ZIP)",
+  "scripts": {
+    "data:normalize": "node scripts/cli.js normalize",
+    "data:validate": "node scripts/cli.js validate",
+    "data:generate": "node scripts/cli.js generate",
+    "data:check": "node scripts/cli.js check",
+    "data:pipeline": "node scripts/cli.js pipeline",
+    "data:normalize:fixtures": "node scripts/cli.js normalize --root fixtures/authorized",
+    "data:validate:fixtures": "node scripts/cli.js validate --root fixtures/authorized",
+    "data:generate:fixtures": "node scripts/cli.js generate --root fixtures/authorized",
+    "data:check:fixtures": "node scripts/cli.js check --root fixtures/authorized",
+    "data:pipeline:fixtures": "node scripts/cli.js pipeline --root fixtures/authorized",
+    "data:all": "node scripts/cli.js pipeline && node scripts/cli.js pipeline --root fixtures/authorized",
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "engines": { "node": ">=20" },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "fengari": "^0.1.5",
+    "yaml": "^2.8.0"
+  }
+}

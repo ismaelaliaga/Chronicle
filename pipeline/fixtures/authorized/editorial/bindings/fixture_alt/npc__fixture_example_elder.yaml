@@ -1,0 +1,7 @@
+schema: "chronicle.editorial.binding/1"
+entity: "npc:fixture_example_elder"
+flavor: fixture_alt
+status: accepted
+tech_refs:
+  - { flavor: fixture_alt, kind: creature, id: 90008 }
+attested: { by: "fixture", method: manual_review, at: "2026-10" }

@@ -1,0 +1,7 @@
+schema: "chronicle.editorial.entity/1"
+id: "continent:fixture_world"
+type: continent
+status: published
+applies_to: [era, fixture_alt]
+discovery: { method: none }
+editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }

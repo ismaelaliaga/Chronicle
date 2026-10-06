@@ -1,0 +1,15 @@
+schema: "chronicle.world.source/1"
+id: legacy_addon
+name: "Addon Chronicle original (datos heredados)"
+kind: other
+origin_group: legacy_addon
+trust_tier: 6
+applicable_flavors: [era]
+obtained: { method: manual_download, version: "addon original (solo lectura)" }
+license:
+  status: unknown
+  summary: "Datos heredados cuyo origen declarado (Wowhead Classic) no tiene condiciones verificadas; los displayID no se han contrastado (Fase 11)."
+  redistribution: unknown
+  derived_data: unknown
+usage: { research: true, contrast: true, local_validation: true, candidate_generation: false, generated_data: false }
+status: research_only

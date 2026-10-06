@@ -1,0 +1,73 @@
+{
+  "attributes": {
+    "display_id": {
+      "claims": [
+        {
+          "confidence": "source_reported",
+          "provenance": {
+            "locator": "Data/NPCs (heredado; no contrastado, Fase 11)",
+            "method": "import",
+            "source": "legacy_addon",
+            "source_version": "addon original (solo lectura)"
+          },
+          "value": 1354
+        }
+      ],
+      "resolved": {
+        "rule": "single_claim",
+        "status": "resolved",
+        "value": 1354
+      }
+    }
+  },
+  "exists": {
+    "claims": [
+      {
+        "confidence": "client_verified",
+        "provenance": {
+          "by": "supervisor",
+          "locator": "Fase 14: descubierto por GUID en el cliente real",
+          "method": "manual",
+          "source": "wow_client",
+          "source_version": "Classic Era (build no registrado)"
+        },
+        "value": "present"
+      }
+    ],
+    "resolved": {
+      "rule": "single_claim",
+      "status": "resolved",
+      "value": "present"
+    }
+  },
+  "names": {
+    "enUS": {
+      "claims": [
+        {
+          "confidence": "source_reported",
+          "provenance": {
+            "by": "claude_fase14",
+            "locator": "Warcraft Wiki: Grelin Whitebeard",
+            "method": "manual",
+            "retrieved_at": "2026-10-04",
+            "source": "warcraft_wiki",
+            "source_url": "https://warcraft.wiki.gg/wiki/Grelin_Whitebeard",
+            "source_version": "consulta manual"
+          },
+          "value": "Grelin Whitebeard"
+        }
+      ],
+      "resolved": {
+        "rule": "single_claim",
+        "status": "resolved",
+        "value": "Grelin Whitebeard"
+      }
+    }
+  },
+  "ref": {
+    "flavor": "era",
+    "id": 786,
+    "kind": "creature"
+  },
+  "schema": "chronicle.world.entity/1"
+}

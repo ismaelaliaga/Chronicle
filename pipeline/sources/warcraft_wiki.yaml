@@ -1,0 +1,17 @@
+schema: "chronicle.world.source/1"
+id: warcraft_wiki
+name: "Warcraft Wiki (warcraft.wiki.gg)"
+kind: wiki
+origin_group: warcraft_wiki
+trust_tier: 6
+applicable_flavors: [era]
+obtained: { method: manual_download, url: "https://warcraft.wiki.gg/", version: "consulta manual", retrieved_at: "2026-10-04" }
+license:
+  status: known
+  identifier: "CC-BY-SA-4.0"
+  summary: "Texto bajo CC BY-SA 4.0; la propiedad intelectual de Warcraft sigue siendo de Blizzard."
+  redistribution: restricted
+  derived_data: restricted
+  attribution: "Warcraft Wiki (CC BY-SA 4.0), pagina y fecha"
+usage: { research: true, contrast: true, local_validation: true, candidate_generation: false, generated_data: false }
+status: research_only

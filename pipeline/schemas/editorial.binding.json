@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/editorial.binding.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.editorial.binding/1"
+    },
+    "entity": {
+      "$ref": "common.json#/$defs/ChronicleId"
+    },
+    "flavor": {
+      "$ref": "common.json#/$defs/FlavorId"
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "accepted",
+        "rejected",
+        "unavailable",
+        "superseded"
+      ]
+    },
+    "tech_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/TechRef"
+      },
+      "minItems": 1
+    },
+    "places": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "locale": {
+            "$ref": "common.json#/$defs/Locale"
+          },
+          "api": {
+            "enum": [
+              "zone_text",
+              "subzone_text"
+            ]
+          },
+          "string": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "common.json#/$defs/ObservationId"
+            },
+            "uniqueItems": true
+          },
+          "confidence": {
+            "$ref": "common.json#/$defs/Confidence"
+          }
+        },
+        "required": [
+          "locale",
+          "api",
+          "string",
+          "evidence",
+          "confidence"
+        ]
+      },
+      "minItems": 1
+    },
+    "area_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ui_map_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/ObservationId"
+      },
+      "uniqueItems": true
+    },
+    "attested": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "enum": [
+            "capture",
+            "manual_review",
+            "source_review"
+          ]
+        },
+        "at": {
+          "$ref": "common.json#/$defs/DateText"
+        }
+      },
+      "required": [
+        "by",
+        "method",
+        "at"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema",
+    "entity",
+    "flavor",
+    "status"
+  ],
+  "title": "Binding entidad x versión (Fase 16, 7.3)",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "accepted"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "attested"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "tech_refs"
+            ]
+          },
+          {
+            "required": [
+              "places"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "not": {
+        "required": [
+          "tech_refs",
+          "places"
+        ]
+      }
+    }
+  ]
+}

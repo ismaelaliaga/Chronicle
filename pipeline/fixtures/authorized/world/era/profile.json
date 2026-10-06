@@ -1,0 +1,33 @@
+{
+  "build": "fixture-0",
+  "capabilities": {
+    "interaction.gossip": {
+      "evidence": [
+        "obs:fixture_era_gossip"
+      ],
+      "status": "verified"
+    },
+    "interaction.quest": {
+      "evidence": [
+        "obs:fixture_era_quest"
+      ],
+      "status": "verified"
+    },
+    "place.subzone_text": {
+      "evidence": [
+        "obs:fixture_era_subzone"
+      ],
+      "status": "verified"
+    },
+    "place.zone_text": {
+      "evidence": [
+        "obs:fixture_era_zone"
+      ],
+      "status": "verified"
+    }
+  },
+  "flavor": "era",
+  "interface": "fixture",
+  "schema": "chronicle.world.client_profile/1",
+  "signals": {}
+}

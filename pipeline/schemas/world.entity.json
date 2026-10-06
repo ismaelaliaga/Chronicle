@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.entity.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.entity/1"
+    },
+    "ref": {
+      "$ref": "common.json#/$defs/TechRef"
+    },
+    "exists": {
+      "$ref": "common.json#/$defs/Field_Presence"
+    },
+    "names": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z]{2}[A-Z]{2}$": {
+          "$ref": "common.json#/$defs/Field_String"
+        }
+      }
+    },
+    "subnames": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z]{2}[A-Z]{2}$": {
+          "$ref": "common.json#/$defs/Field_String"
+        }
+      }
+    },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "npc_flags": {
+          "$ref": "common.json#/$defs/Field_Integer"
+        },
+        "rank": {
+          "$ref": "common.json#/$defs/Field_String"
+        },
+        "level_min": {
+          "$ref": "common.json#/$defs/Field_Integer"
+        },
+        "level_max": {
+          "$ref": "common.json#/$defs/Field_Integer"
+        },
+        "faction_template": {
+          "$ref": "common.json#/$defs/Field_Integer"
+        },
+        "creature_type": {
+          "$ref": "common.json#/$defs/Field_String"
+        },
+        "display_id": {
+          "$ref": "common.json#/$defs/Field_Integer"
+        }
+      },
+      "required": []
+    },
+    "relations": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "$ref": "common.json#/$defs/Field_TechRefList"
+        }
+      }
+    },
+    "spawns": {
+      "$ref": "common.json#/$defs/Field_SpawnList"
+    },
+    "places": {
+      "$ref": "common.json#/$defs/Field_TechRefList"
+    }
+  },
+  "required": [
+    "schema",
+    "ref",
+    "exists"
+  ],
+  "title": "Entidad del mundo normalizada (Fase 16, 5.4)"
+}

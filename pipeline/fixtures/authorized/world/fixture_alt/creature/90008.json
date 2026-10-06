@@ -1,0 +1,27 @@
+{
+  "exists": {
+    "claims": [
+      {
+        "confidence": "source_reported",
+        "provenance": {
+          "locator": "fixture sintetico",
+          "method": "import",
+          "source": "fixture_authorized_source",
+          "source_version": "fixture"
+        },
+        "value": "present"
+      }
+    ],
+    "resolved": {
+      "rule": "single_claim",
+      "status": "resolved",
+      "value": "present"
+    }
+  },
+  "ref": {
+    "flavor": "fixture_alt",
+    "id": 90008,
+    "kind": "creature"
+  },
+  "schema": "chronicle.world.entity/1"
+}

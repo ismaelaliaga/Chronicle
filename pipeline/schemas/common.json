@@ -1,0 +1,1406 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/common.json",
+  "title": "Tipos comunes del pipeline de Chronicle",
+  "$defs": {
+    "ChronicleId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(continent|zone|city|subzone|npc|lore):(?=[a-z0-9_]*[a-z])[a-z0-9]+(_[a-z0-9]+)*$",
+      "maxLength": 74
+    },
+    "HintId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^hint:(?=[a-z0-9_]*[a-z])[a-z0-9]+(_[a-z0-9]+)*$",
+      "maxLength": 70
+    },
+    "FlavorId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 32
+    },
+    "Locale": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z]{2}[A-Z]{2}$"
+    },
+    "SourceId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_]+$",
+      "maxLength": 64
+    },
+    "OverrideId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^ovr:[a-z0-9]+(_[a-z0-9]+)*$",
+      "maxLength": 70
+    },
+    "ObservationId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^obs:[a-z0-9_]{4,64}$"
+    },
+    "ConflictId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^conf:[a-f0-9]{8,64}$"
+    },
+    "Fingerprint": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "DateText": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[0-9]{4}-[0-9]{2}(-[0-9]{2})?$"
+    },
+    "CapabilityId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z_]+(\\.[a-z_]+)+$"
+    },
+    "TechKind": {
+      "enum": [
+        "creature",
+        "quest",
+        "area",
+        "ui_map",
+        "map"
+      ]
+    },
+    "Confidence": {
+      "enum": [
+        "client_verified",
+        "source_confirmed",
+        "source_reported",
+        "inferred"
+      ]
+    },
+    "TechRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flavor": {
+          "$ref": "common.json#/$defs/FlavorId"
+        },
+        "kind": {
+          "$ref": "common.json#/$defs/TechKind"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        }
+      },
+      "required": [
+        "flavor",
+        "kind",
+        "id"
+      ]
+    },
+    "NameOnlyRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flavor": {
+          "$ref": "common.json#/$defs/FlavorId"
+        },
+        "kind": {
+          "const": "name_only"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "flavor",
+        "kind",
+        "key"
+      ]
+    },
+    "WorldRef": {
+      "oneOf": [
+        {
+          "$ref": "common.json#/$defs/TechRef"
+        },
+        {
+          "$ref": "common.json#/$defs/NameOnlyRef"
+        }
+      ]
+    },
+    "Provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "$ref": "common.json#/$defs/SourceId"
+        },
+        "source_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "enum": [
+            "import",
+            "capture",
+            "manual",
+            "derived"
+          ]
+        },
+        "retrieved_at": {
+          "$ref": "common.json#/$defs/DateText"
+        },
+        "source_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "client_build": {
+          "type": "string",
+          "minLength": 1
+        },
+        "by": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "source",
+        "source_version",
+        "method"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "capture"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "required": [
+              "client_build"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "manual"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "required": [
+              "by"
+            ]
+          }
+        }
+      ]
+    },
+    "ProvenanceNoSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "enum": [
+            "import",
+            "capture",
+            "manual",
+            "derived"
+          ]
+        },
+        "retrieved_at": {
+          "$ref": "common.json#/$defs/DateText"
+        },
+        "source_url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "client_build": {
+          "type": "string",
+          "minLength": 1
+        },
+        "by": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "source_version",
+        "method"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "capture"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "required": [
+              "client_build"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "manual"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "required": [
+              "by"
+            ]
+          }
+        }
+      ]
+    },
+    "Spawn": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "map": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "coordinate_system": {
+          "enum": [
+            "unknown",
+            "uimap_percent",
+            "world_xyz"
+          ]
+        }
+      },
+      "required": [
+        "coordinate_system"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "coordinate_system": {
+                "not": {
+                  "const": "unknown"
+                }
+              }
+            },
+            "required": [
+              "coordinate_system"
+            ]
+          },
+          "then": {
+            "required": [
+              "map",
+              "x",
+              "y"
+            ]
+          }
+        }
+      ]
+    },
+    "Claim_String": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provenance": {
+          "$ref": "common.json#/$defs/Provenance"
+        },
+        "confidence": {
+          "$ref": "common.json#/$defs/Confidence"
+        }
+      },
+      "required": [
+        "value",
+        "provenance",
+        "confidence"
+      ]
+    },
+    "Resolved_String": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unknown",
+            "conflict",
+            "overridden"
+          ]
+        },
+        "rule": {
+          "enum": [
+            "single_claim",
+            "agreement",
+            "tier_precedence",
+            "override",
+            "none"
+          ]
+        },
+        "override": {
+          "$ref": "common.json#/$defs/OverrideId"
+        },
+        "conflict": {
+          "$ref": "common.json#/$defs/ConflictId"
+        }
+      },
+      "required": [
+        "value",
+        "status",
+        "rule"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "conflict"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "conflict"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "overridden"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "const": "override"
+              }
+            },
+            "required": [
+              "override"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "enum": [
+                  "single_claim",
+                  "agreement",
+                  "tier_precedence"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Field_String": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/Claim_String"
+          },
+          "minItems": 1
+        },
+        "resolved": {
+          "$ref": "common.json#/$defs/Resolved_String"
+        }
+      },
+      "required": [
+        "claims",
+        "resolved"
+      ]
+    },
+    "Claim_Integer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "integer"
+        },
+        "provenance": {
+          "$ref": "common.json#/$defs/Provenance"
+        },
+        "confidence": {
+          "$ref": "common.json#/$defs/Confidence"
+        }
+      },
+      "required": [
+        "value",
+        "provenance",
+        "confidence"
+      ]
+    },
+    "Resolved_Integer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unknown",
+            "conflict",
+            "overridden"
+          ]
+        },
+        "rule": {
+          "enum": [
+            "single_claim",
+            "agreement",
+            "tier_precedence",
+            "override",
+            "none"
+          ]
+        },
+        "override": {
+          "$ref": "common.json#/$defs/OverrideId"
+        },
+        "conflict": {
+          "$ref": "common.json#/$defs/ConflictId"
+        }
+      },
+      "required": [
+        "value",
+        "status",
+        "rule"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "conflict"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "conflict"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "overridden"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "const": "override"
+              }
+            },
+            "required": [
+              "override"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "enum": [
+                  "single_claim",
+                  "agreement",
+                  "tier_precedence"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Field_Integer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/Claim_Integer"
+          },
+          "minItems": 1
+        },
+        "resolved": {
+          "$ref": "common.json#/$defs/Resolved_Integer"
+        }
+      },
+      "required": [
+        "claims",
+        "resolved"
+      ]
+    },
+    "Claim_Presence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "enum": [
+            "present",
+            "absent"
+          ]
+        },
+        "provenance": {
+          "$ref": "common.json#/$defs/Provenance"
+        },
+        "confidence": {
+          "$ref": "common.json#/$defs/Confidence"
+        }
+      },
+      "required": [
+        "value",
+        "provenance",
+        "confidence"
+      ]
+    },
+    "Resolved_Presence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "enum": [
+                "present",
+                "absent"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unknown",
+            "conflict",
+            "overridden"
+          ]
+        },
+        "rule": {
+          "enum": [
+            "single_claim",
+            "agreement",
+            "tier_precedence",
+            "override",
+            "none"
+          ]
+        },
+        "override": {
+          "$ref": "common.json#/$defs/OverrideId"
+        },
+        "conflict": {
+          "$ref": "common.json#/$defs/ConflictId"
+        }
+      },
+      "required": [
+        "value",
+        "status",
+        "rule"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "conflict"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "conflict"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "overridden"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "const": "override"
+              }
+            },
+            "required": [
+              "override"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "enum": [
+                  "single_claim",
+                  "agreement",
+                  "tier_precedence"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Field_Presence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/Claim_Presence"
+          },
+          "minItems": 1
+        },
+        "resolved": {
+          "$ref": "common.json#/$defs/Resolved_Presence"
+        }
+      },
+      "required": [
+        "claims",
+        "resolved"
+      ]
+    },
+    "Claim_Scalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": [
+            "string",
+            "integer",
+            "boolean",
+            "number"
+          ]
+        },
+        "provenance": {
+          "$ref": "common.json#/$defs/Provenance"
+        },
+        "confidence": {
+          "$ref": "common.json#/$defs/Confidence"
+        }
+      },
+      "required": [
+        "value",
+        "provenance",
+        "confidence"
+      ]
+    },
+    "Resolved_Scalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "number"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unknown",
+            "conflict",
+            "overridden"
+          ]
+        },
+        "rule": {
+          "enum": [
+            "single_claim",
+            "agreement",
+            "tier_precedence",
+            "override",
+            "none"
+          ]
+        },
+        "override": {
+          "$ref": "common.json#/$defs/OverrideId"
+        },
+        "conflict": {
+          "$ref": "common.json#/$defs/ConflictId"
+        }
+      },
+      "required": [
+        "value",
+        "status",
+        "rule"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "conflict"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "conflict"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "overridden"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "const": "override"
+              }
+            },
+            "required": [
+              "override"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "enum": [
+                  "single_claim",
+                  "agreement",
+                  "tier_precedence"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Field_Scalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/Claim_Scalar"
+          },
+          "minItems": 1
+        },
+        "resolved": {
+          "$ref": "common.json#/$defs/Resolved_Scalar"
+        }
+      },
+      "required": [
+        "claims",
+        "resolved"
+      ]
+    },
+    "Claim_TechRefList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/TechRef"
+          }
+        },
+        "provenance": {
+          "$ref": "common.json#/$defs/Provenance"
+        },
+        "confidence": {
+          "$ref": "common.json#/$defs/Confidence"
+        }
+      },
+      "required": [
+        "value",
+        "provenance",
+        "confidence"
+      ]
+    },
+    "Resolved_TechRefList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "common.json#/$defs/TechRef"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unknown",
+            "conflict",
+            "overridden"
+          ]
+        },
+        "rule": {
+          "enum": [
+            "single_claim",
+            "agreement",
+            "tier_precedence",
+            "override",
+            "none"
+          ]
+        },
+        "override": {
+          "$ref": "common.json#/$defs/OverrideId"
+        },
+        "conflict": {
+          "$ref": "common.json#/$defs/ConflictId"
+        }
+      },
+      "required": [
+        "value",
+        "status",
+        "rule"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "conflict"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "conflict"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "overridden"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "const": "override"
+              }
+            },
+            "required": [
+              "override"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "enum": [
+                  "single_claim",
+                  "agreement",
+                  "tier_precedence"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Field_TechRefList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/Claim_TechRefList"
+          },
+          "minItems": 1
+        },
+        "resolved": {
+          "$ref": "common.json#/$defs/Resolved_TechRefList"
+        }
+      },
+      "required": [
+        "claims",
+        "resolved"
+      ]
+    },
+    "Claim_SpawnList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/Spawn"
+          }
+        },
+        "provenance": {
+          "$ref": "common.json#/$defs/Provenance"
+        },
+        "confidence": {
+          "$ref": "common.json#/$defs/Confidence"
+        }
+      },
+      "required": [
+        "value",
+        "provenance",
+        "confidence"
+      ]
+    },
+    "Resolved_SpawnList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "common.json#/$defs/Spawn"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unknown",
+            "conflict",
+            "overridden"
+          ]
+        },
+        "rule": {
+          "enum": [
+            "single_claim",
+            "agreement",
+            "tier_precedence",
+            "override",
+            "none"
+          ]
+        },
+        "override": {
+          "$ref": "common.json#/$defs/OverrideId"
+        },
+        "conflict": {
+          "$ref": "common.json#/$defs/ConflictId"
+        }
+      },
+      "required": [
+        "value",
+        "status",
+        "rule"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "conflict"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "conflict"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "overridden"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "const": "override"
+              }
+            },
+            "required": [
+              "override"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rule": {
+                "enum": [
+                  "single_claim",
+                  "agreement",
+                  "tier_precedence"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Field_SpawnList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/Claim_SpawnList"
+          },
+          "minItems": 1
+        },
+        "resolved": {
+          "$ref": "common.json#/$defs/Resolved_SpawnList"
+        }
+      },
+      "required": [
+        "claims",
+        "resolved"
+      ]
+    }
+  }
+}

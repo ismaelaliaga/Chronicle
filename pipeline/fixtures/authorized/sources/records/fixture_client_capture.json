@@ -1,0 +1,23 @@
+{
+  "records": [
+    {
+      "confidence": "client_verified",
+      "field": "exists",
+      "flavor": "era",
+      "provenance": {
+        "client_build": "fixture-0",
+        "locator": "fixture sintetico",
+        "method": "capture",
+        "source_version": "fixture build"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 90006,
+        "kind": "creature"
+      },
+      "value": "present"
+    }
+  ],
+  "schema": "chronicle.world.claim_records/1",
+  "source": "fixture_client_capture"
+}

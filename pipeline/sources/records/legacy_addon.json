@@ -1,0 +1,38 @@
+{
+  "records": [
+    {
+      "confidence": "source_reported",
+      "field": "attributes.display_id",
+      "flavor": "era",
+      "provenance": {
+        "locator": "Data/NPCs (heredado; no contrastado, Fase 11)",
+        "method": "import",
+        "source_version": "addon original (solo lectura)"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 786,
+        "kind": "creature"
+      },
+      "value": 1354
+    },
+    {
+      "confidence": "source_reported",
+      "field": "attributes.display_id",
+      "flavor": "era",
+      "provenance": {
+        "locator": "Data/NPCs (heredado; no contrastado, Fase 11)",
+        "method": "import",
+        "source_version": "addon original (solo lectura)"
+      },
+      "subject": {
+        "flavor": "era",
+        "id": 658,
+        "kind": "creature"
+      },
+      "value": 1362
+    }
+  ],
+  "schema": "chronicle.world.claim_records/1",
+  "source": "legacy_addon"
+}

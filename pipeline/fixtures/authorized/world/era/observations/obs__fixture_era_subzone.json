@@ -1,0 +1,22 @@
+{
+  "captured_with": {
+    "tool": "fixture",
+    "version": "0"
+  },
+  "client": {
+    "build": "fixture-0",
+    "interface": "fixture",
+    "signals": {}
+  },
+  "flavor": "era",
+  "id": "obs:fixture_era_subzone",
+  "kind": "capability_probe",
+  "locale": "esES",
+  "observed_at": "2026-10",
+  "payload": {
+    "capability": "place.subzone_text",
+    "result": "available"
+  },
+  "restricted_context": false,
+  "schema": "chronicle.world.observation/1"
+}

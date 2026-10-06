@@ -1,0 +1,12 @@
+schema: "chronicle.editorial.text/1"
+locale: esES
+entries:
+  "continent:fixture_world": { title: "Mundo Fixture" }
+  "zone:fixture_land": { title: "Tierra Fixture" }
+  "subzone:fixture_hollow": { title: "Hondonada Fixture" }
+  "npc:fixture_example_elder": { title: "Anciano Fixture" }
+  "npc:fixture_example_keeper": { title: "Guardian Fixture" }
+  "npc:fixture_unauthorized_example": { title: "Sin autorizar Fixture" }
+  "npc:fixture_conflicted_example": { title: "En conflicto Fixture" }
+  "hint:fixture_elder_1": { description: "TEXTO_EDITORIAL_PENDIENTE (fixture)" }
+  "hint:fixture_keeper_1": { description: "TEXTO_EDITORIAL_PENDIENTE (fixture)" }

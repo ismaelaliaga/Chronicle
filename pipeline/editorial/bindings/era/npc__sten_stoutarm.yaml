@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.binding/1"
+entity: "npc:sten_stoutarm"
+flavor: era
+status: accepted
+tech_refs:
+  - { flavor: era, kind: creature, id: 658 }
+attested: { by: "supervisor", method: manual_review, at: "2026-10" }
+notes: "npcID descubierto por GUID en WoW Classic Era (Fase 14). Este binding NO concede autorizacion para el pack."

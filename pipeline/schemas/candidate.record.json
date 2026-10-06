@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/candidate.record.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.candidate.record/1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^cand:[a-z][a-z0-9_]*:[a-z_]+:[0-9]+$"
+    },
+    "flavor": {
+      "$ref": "common.json#/$defs/FlavorId"
+    },
+    "subject": {
+      "$ref": "common.json#/$defs/TechRef"
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "names": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z]{2}[A-Z]{2}$": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "subnames": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z]{2}[A-Z]{2}$": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "required": [
+        "names"
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ]
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "raw": {
+            "type": "number"
+          },
+          "normalized": {
+            "type": "number"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "contribution": {
+            "type": "number"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "id",
+          "raw",
+          "normalized",
+          "weight",
+          "contribution",
+          "evidence"
+        ]
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "total"
+      ]
+    },
+    "rank": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "already_bound",
+          "previously_rejected",
+          "previously_deferred",
+          "generic_name_pattern",
+          "data_gap"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "data_gaps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "inputs_fingerprint": {
+      "$ref": "common.json#/$defs/Fingerprint"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "flavor",
+    "subject",
+    "display",
+    "profile",
+    "signals",
+    "score",
+    "rank",
+    "inputs_fingerprint"
+  ],
+  "title": "Candidato (Fase 16, 6.3). Sin ningún campo de inclusión o decisión (SCORE != DECISION EDITORIAL)"
+}

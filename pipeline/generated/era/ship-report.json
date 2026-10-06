@@ -1,0 +1,111 @@
+{
+  "entries": [
+    {
+      "authorized_by": [],
+      "available": true,
+      "details": [],
+      "entity": "continent:eastern_kingdoms",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [
+        {
+          "blocked_because": "usage.generated_data = false",
+          "claims_from": [
+            "wow_client"
+          ],
+          "datum": "exists"
+        }
+      ],
+      "entity": "npc:grelin_whitebeard",
+      "flavor": "era",
+      "omitted_optional": [
+        {
+          "blocked_because": "status = research_only",
+          "claims_from": [
+            "legacy_addon"
+          ],
+          "datum": "attributes.display_id"
+        }
+      ],
+      "reasons": [
+        "source_not_authorized_for_pack",
+        "capability_unverified:interaction.gossip"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [
+        {
+          "blocked_because": "usage.generated_data = false",
+          "claims_from": [
+            "wow_client"
+          ],
+          "datum": "exists"
+        }
+      ],
+      "entity": "npc:sten_stoutarm",
+      "flavor": "era",
+      "omitted_optional": [
+        {
+          "blocked_because": "status = research_only",
+          "claims_from": [
+            "legacy_addon"
+          ],
+          "datum": "attributes.display_id"
+        }
+      ],
+      "reasons": [
+        "source_not_authorized_for_pack",
+        "capability_unverified:interaction.gossip"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [
+        {
+          "blocked_because": "usage.generated_data = false",
+          "claims_from": [
+            "wow_client"
+          ],
+          "datum": "texts.esES.subzone_text"
+        }
+      ],
+      "entity": "subzone:coldridge_valley",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [
+        "source_not_authorized_for_pack",
+        "capability_unverified:place.subzone_text"
+      ],
+      "warnings": []
+    },
+    {
+      "authorized_by": [],
+      "available": false,
+      "details": [],
+      "entity": "zone:dun_morogh",
+      "flavor": "era",
+      "omitted_optional": [],
+      "reasons": [
+        "no_binding"
+      ],
+      "warnings": []
+    }
+  ],
+  "flavor": "era",
+  "policy": {
+    "authorized_sources": [],
+    "capability_policy": "block"
+  },
+  "schema": "chronicle.report.ship/1"
+}
