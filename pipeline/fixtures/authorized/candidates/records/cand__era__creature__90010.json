@@ -1,0 +1,31 @@
+{
+  "display": {
+    "names": {
+      "enUS": "Fixture Scribe"
+    }
+  },
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flavor": "era",
+  "id": "cand:era:creature:90010",
+  "inputs_fingerprint": "sha256:50d2ebb276f8a53cc20e62444da57fa83a3fbe10fcfb96fc856f1f16375b8772",
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 2,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 90010,
+    "kind": "creature"
+  }
+}

@@ -7,18 +7,25 @@ const path = require('path');
 const fengari = require('fengari');
 const { validateDataset } = require('../scripts/lib/validate');
 const { buildFlavor, GENERATOR_VERSION } = require('../scripts/lib/pack');
+const { shipEntity } = require('../scripts/lib/ship');
 const { Report } = require('../scripts/lib/report');
 const { sha256Hex } = require('../scripts/lib/canonical');
 const { FIXTURE_ROOT, REAL_ROOT, copyDataset, edit, read, rm, cli } = require('./helpers');
 
+// Igual que `data:generate`: la validación de ámbito «publish» no lee Candidate Data.
 function build(root, flavor) {
-  const { model, report: vr } = validateDataset(root);
+  const { model, report: vr } = validateDataset(root, { scope: 'publish' });
   assert.deepEqual(vr.errors, [], vr.format().join('\n'));
   const report = new Report();
   const built = buildFlavor(model, flavor, report);
   assert.deepEqual(report.errors, [], report.format().join('\n'));
+  built.model = model;
   return built;
 }
+
+// Grelin y Sten son entidades «bootstrap» en `drafting`: el generador ni siquiera las evalúa (filtro de entrada editorial en pack.js; ship.js no lo conoce).
+// La evaluación técnica de ship.js sobre ellas es solo HIPOTÉTICA y sigue diciendo por qué no se podrían publicar (D8 + capability sin verificar).
+const evalHypothetical = (b, id) => shipEntity(b.model, b.model.entityDocs.get(id), 'era');
 
 function withFixtures(mutate, flavor = 'era') {
   const tmp = copyDataset(FIXTURE_ROOT);
@@ -28,31 +35,35 @@ function withFixtures(mutate, flavor = 'era') {
 const entry = (b, id) => b.shipReport.entries.find((e) => e.entity === id);
 
 // ------------------------------------------------------------------------ datos reales: NADA técnico entra
-test('dataset real: Grelin y Sten salen excluidos con source_not_authorized_for_pack (D8 pendiente) y sin datos técnicos', () => {
+test('dataset real: Grelin y Sten (bootstrap/drafting) no se evalúan ni entran al pack; la evaluación hipotética sigue siendo source_not_authorized_for_pack (D8 pendiente)', () => {
   const b = build(REAL_ROOT, 'era');
   for (const id of ['npc:grelin_whitebeard', 'npc:sten_stoutarm']) {
-    const e = entry(b, id);
-    assert.equal(e.available, false, id);
-    assert.ok(e.reasons.includes('source_not_authorized_for_pack'), id);
-    assert.equal(b.pack.discovery[id], undefined, `${id} no debe tener descubrimiento en el pack`);
-    assert.equal((b.pack.bindings || {})[id], undefined);
+    const doc = b.model.entityDocs.get(id);
+    assert.equal(doc.status, 'drafting', id);
+    assert.equal(doc.editorial.origin, 'bootstrap', id);
+    assert.equal(entry(b, id), undefined, `${id}: el ship-report no evalúa una entidad en drafting`);
+    assert.equal(b.pack.entities[id], undefined, id);
+    assert.equal(b.pack.discovery[id], undefined, id);
+    const h = evalHypothetical(b, id);
+    assert.equal(h.available, false, id);
+    assert.ok(h.reasons.includes('source_not_authorized_for_pack'), id);
+    assert.ok(h.reasons.includes('capability_unverified:interaction.gossip'), id);
   }
   assert.deepEqual(b.shipReport.policy.authorized_sources, []);
 });
 
-test('dataset real: ni 786, 658, 1354 ni 1362 aparecen en Pack.lua; el display_id 1354 queda como dato de investigación', () => {
+test('dataset real: ni 786, 658, 1354 ni 1362 aparecen en Pack.lua; el display_id 1354 queda como dato de investigación (omitido en la evaluación hipotética)', () => {
   const b = build(REAL_ROOT, 'era');
   for (const n of ['786', '658', '1354', '1362', 'display_id']) assert.ok(!b.lua.includes(n), `«${n}» no puede estar en el pack real`);
-  const grelin = entry(b, 'npc:grelin_whitebeard');
-  const omitted = grelin.omitted_optional.find((o) => o.datum === 'attributes.display_id');
+  const omitted = evalHypothetical(b, 'npc:grelin_whitebeard').omitted_optional.find((o) => o.datum === 'attributes.display_id');
   assert.ok(omitted);
   assert.equal(omitted.blocked_because, 'status = research_only');
   assert.deepEqual(omitted.claims_from, ['legacy_addon']);
 });
 
 test('dataset real: client_verified (wow_client) NO autoriza: el motivo es usage.generated_data = false', () => {
-  const e = entry(build(REAL_ROOT, 'era'), 'npc:grelin_whitebeard');
-  assert.deepEqual(e.details[0], { blocked_because: 'usage.generated_data = false', claims_from: ['wow_client'], datum: 'exists' });
+  const h = evalHypothetical(build(REAL_ROOT, 'era'), 'npc:grelin_whitebeard');
+  assert.deepEqual(h.details[0], { blocked_because: 'usage.generated_data = false', claims_from: ['wow_client'], datum: 'exists' });
 });
 
 test('mutación: si wow_client pasa a generated_data=true SIN aprobación del propietario, el dataset no es válido (no se puede forzar la regla)', () => {

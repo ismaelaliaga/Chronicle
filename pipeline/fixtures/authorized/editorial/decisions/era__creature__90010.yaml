@@ -1,0 +1,10 @@
+schema: "chronicle.editorial.candidate_decision/2"
+subject: { flavor: era, kind: creature, id: 90010 }
+decision: accepted
+entity: "npc:fixture_pending_example"
+inclusion_reasons: [represents_group_or_place]
+reason: "FIXTURE SINTETICO: aceptada, pero sin Binding ni contenido: accepted != Binding != publicable."
+policy_version: 1
+evidence_fingerprint: "sha256:50d2ebb276f8a53cc20e62444da57fa83a3fbe10fcfb96fc856f1f16375b8772"
+by: "fixture"
+at: "2026-10"

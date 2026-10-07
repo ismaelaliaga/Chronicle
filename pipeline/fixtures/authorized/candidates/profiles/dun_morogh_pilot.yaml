@@ -1,6 +1,7 @@
 schema: "chronicle.candidate.scoring_profile/1"
 id: dun_morogh_pilot
 version: 1
+approval: illustrative
 flavors: [era]
 signals:
   - { id: quest_relevance, weight: 30, enabled: true }

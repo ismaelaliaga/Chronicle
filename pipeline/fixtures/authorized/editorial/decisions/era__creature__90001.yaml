@@ -1,0 +1,10 @@
+schema: "chronicle.editorial.candidate_decision/2"
+subject: { flavor: era, kind: creature, id: 90001 }
+decision: accepted
+entity: "npc:fixture_example_keeper"
+inclusion_reasons: [relevant_quest, zone_context]
+reason: "FIXTURE SINTETICO: decision editorial inventada."
+policy_version: 1
+evidence_fingerprint: "sha256:9ed17670694b5f5b8dc47597b0c6fe1c6f6f9c6cbf147a9c45f20e61a453df57"
+by: "fixture"
+at: "2026-10"

@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.link_decision/1"
+a: { flavor: era, kind: creature, id: 90004 }
+b: { flavor: fixture_alt, kind: creature, id: 90008 }
+decision: confirm
+reason: "FIXTURE SINTETICO: una persona confirma que ambas referencias describen el mismo sujeto. matched NO implica inclusion editorial."
+evidence_fingerprint: "sha256:b6065faf369978c30b42b98bbcac76024d4e805af427b1b6e247f4f78f1cffa6"
+by: "fixture"
+at: "2026-10"

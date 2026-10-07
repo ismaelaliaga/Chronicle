@@ -145,6 +145,79 @@
     },
     "inputs_fingerprint": {
       "$ref": "common.json#/$defs/Fingerprint"
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "$ref": "common.json#/$defs/SourceId"
+          },
+          "origin_group": {
+            "type": "string",
+            "minLength": 1
+          },
+          "claims": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "source",
+          "origin_group",
+          "claims"
+        ]
+      }
+    },
+    "links": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^link:[a-f0-9]{16}$"
+      }
+    },
+    "evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "independent_origins": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "client_verified": {
+          "type": "boolean"
+        },
+        "open_conflicts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "independent_origins",
+        "client_verified",
+        "open_conflicts"
+      ]
+    },
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "new",
+            "investigating",
+            "sufficient",
+            "blocked"
+          ]
+        }
+      },
+      "required": [
+        "status"
+      ]
     }
   },
   "required": [
@@ -152,12 +225,27 @@
     "id",
     "flavor",
     "subject",
-    "display",
-    "profile",
-    "signals",
-    "score",
-    "rank",
+    "sources",
+    "evidence_summary",
+    "research",
     "inputs_fingerprint"
   ],
-  "title": "Candidato (Fase 16, 6.3). Sin ningún campo de inclusión o decisión (SCORE != DECISION EDITORIAL)"
+  "title": "Candidato (Fase 16, 6.3; Fase 18). Propuesta de revisión de un sujeto técnico en un flavor. Sin ningún campo de inclusión o decisión (SCORE != DECISION EDITORIAL). El scoring es opcional",
+  "dependentRequired": {
+    "profile": [
+      "signals",
+      "score"
+    ],
+    "signals": [
+      "profile",
+      "score"
+    ],
+    "score": [
+      "profile",
+      "signals"
+    ],
+    "rank": [
+      "score"
+    ]
+  }
 }

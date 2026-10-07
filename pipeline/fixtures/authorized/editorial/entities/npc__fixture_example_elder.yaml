@@ -8,4 +8,4 @@ applies_to: [era, fixture_alt]
 discovery:
   method: interaction
   interaction: { type: gossip }
-editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }
+editorial: { author: "fixture", origin: candidate, notes: "FIXTURE SINTETICO" }

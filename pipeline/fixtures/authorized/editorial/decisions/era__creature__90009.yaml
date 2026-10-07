@@ -1,0 +1,9 @@
+schema: "chronicle.editorial.candidate_decision/2"
+subject: { flavor: era, kind: creature, id: 90009 }
+decision: deferred
+defer_reason: insufficient_evidence
+reason: "FIXTURE SINTETICO: aun no sabemos lo suficiente (no es un rechazo)."
+policy_version: 1
+evidence_fingerprint: "sha256:d0ac23c405acc85151e63a10fd3b176bcbf90eda2467eb60f59018027ad818bf"
+by: "fixture"
+at: "2026-10"

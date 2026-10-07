@@ -9,4 +9,4 @@ requires_hint: false
 discovery:
   method: interaction
   interaction: { type: gossip }
-editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }
+editorial: { author: "fixture", origin: candidate, notes: "FIXTURE SINTETICO" }

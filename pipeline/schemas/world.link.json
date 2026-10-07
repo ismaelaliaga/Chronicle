@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/world.link.json",
+  "title": "Enlace de reconciliación propuesto por la máquina (Fase 18). La máquina nunca propone «matched» entre referencias distintas: lo confirma una persona (LinkDecision)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.world.link/1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^link:[a-f0-9]{16}$"
+    },
+    "relation": {
+      "enum": [
+        "same_subject",
+        "same_entity_across_flavors"
+      ]
+    },
+    "a": {
+      "$ref": "common.json#/$defs/TechRef"
+    },
+    "b": {
+      "$ref": "common.json#/$defs/TechRef"
+    },
+    "status": {
+      "enum": [
+        "probable_match",
+        "conflict",
+        "unresolved"
+      ]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "same_name",
+              "same_place",
+              "same_display_id",
+              "generic_name",
+              "name_mismatch"
+            ]
+          },
+          "value": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "common.json#/$defs/SourceId"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "kind",
+          "value",
+          "sources"
+        ]
+      },
+      "minItems": 1
+    },
+    "rule_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "fingerprint": {
+      "$ref": "common.json#/$defs/Fingerprint"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "relation",
+    "a",
+    "b",
+    "status",
+    "evidence",
+    "rule_version",
+    "fingerprint"
+  ]
+}

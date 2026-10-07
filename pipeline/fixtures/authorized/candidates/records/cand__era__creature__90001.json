@@ -1,0 +1,31 @@
+{
+  "display": {
+    "names": {
+      "enUS": "Fixture Keeper"
+    }
+  },
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flavor": "era",
+  "id": "cand:era:creature:90001",
+  "inputs_fingerprint": "sha256:9ed17670694b5f5b8dc47597b0c6fe1c6f6f9c6cbf147a9c45f20e61a453df57",
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 3,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 90001,
+    "kind": "creature"
+  }
+}

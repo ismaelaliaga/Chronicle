@@ -19,4 +19,4 @@ flavors:
     discovery:
       method: interaction
       interaction: { type: quest }
-editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }
+editorial: { author: "fixture", origin: candidate, notes: "FIXTURE SINTETICO" }

@@ -5,7 +5,7 @@
   "additionalProperties": false,
   "properties": {
     "schema": {
-      "const": "chronicle.editorial.candidate_decision/1"
+      "const": "chronicle.editorial.candidate_decision/2"
     },
     "subject": {
       "$ref": "common.json#/$defs/TechRef"
@@ -52,6 +52,47 @@
     },
     "at": {
       "$ref": "common.json#/$defs/DateText"
+    },
+    "inclusion_reasons": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "own_story",
+          "lore_presence",
+          "event_participant",
+          "relevant_quest",
+          "leadership",
+          "represents_group_or_place",
+          "zone_context",
+          "memorable"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "reject_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "duplicate_of": {
+      "$ref": "common.json#/$defs/TechRef"
+    },
+    "defer_reason": {
+      "enum": [
+        "insufficient_evidence",
+        "awaiting_source_policy",
+        "awaiting_client_data",
+        "awaiting_editorial_review"
+      ]
+    },
+    "policy_version": {
+      "type": "integer",
+      "minimum": 1
     }
   },
   "required": [
@@ -59,10 +100,11 @@
     "subject",
     "decision",
     "evidence_fingerprint",
+    "policy_version",
     "by",
     "at"
   ],
-  "title": "Decisión sobre un candidato (Fase 16, 7.7)",
+  "title": "Decisión sobre un candidato (Fase 16, 7.7; v2 de Fase 18). accepted = decisión editorial positiva; NO implica Binding, publicación técnica ni Discovery",
   "allOf": [
     {
       "if": {
@@ -77,17 +119,35 @@
       },
       "then": {
         "required": [
-          "entity"
-        ]
+          "entity",
+          "inclusion_reasons"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "reject_reasons"
+              ]
+            },
+            {
+              "required": [
+                "defer_reason"
+              ]
+            },
+            {
+              "required": [
+                "duplicate_of"
+              ]
+            }
+          ]
+        }
       }
     },
     {
       "if": {
         "properties": {
           "decision": {
-            "not": {
-              "const": "shortlisted"
-            }
+            "const": "rejected"
           }
         },
         "required": [
@@ -96,7 +156,129 @@
       },
       "then": {
         "required": [
-          "reason"
+          "reject_reasons"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "inclusion_reasons"
+              ]
+            },
+            {
+              "required": [
+                "entity"
+              ]
+            },
+            {
+              "required": [
+                "defer_reason"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "deferred"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "required": [
+          "defer_reason"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "inclusion_reasons"
+              ]
+            },
+            {
+              "required": [
+                "entity"
+              ]
+            },
+            {
+              "required": [
+                "reject_reasons"
+              ]
+            },
+            {
+              "required": [
+                "duplicate_of"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "shortlisted"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "inclusion_reasons"
+              ]
+            },
+            {
+              "required": [
+                "entity"
+              ]
+            },
+            {
+              "required": [
+                "reject_reasons"
+              ]
+            },
+            {
+              "required": [
+                "defer_reason"
+              ]
+            },
+            {
+              "required": [
+                "duplicate_of"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reject_reasons": {
+            "contains": {
+              "const": "duplicate_of"
+            }
+          }
+        },
+        "required": [
+          "reject_reasons"
+        ]
+      },
+      "then": {
+        "required": [
+          "duplicate_of"
         ]
       }
     }

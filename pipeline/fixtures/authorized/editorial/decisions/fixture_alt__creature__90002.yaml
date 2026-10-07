@@ -1,0 +1,10 @@
+schema: "chronicle.editorial.candidate_decision/2"
+subject: { flavor: fixture_alt, kind: creature, id: 90002 }
+decision: accepted
+entity: "npc:fixture_example_keeper"
+inclusion_reasons: [zone_context]
+reason: "FIXTURE SINTETICO: misma entidad en otra version (decision humana independiente)."
+policy_version: 1
+evidence_fingerprint: "sha256:3e7a1b8a283bbb17f1eee12cf66f96ed94629c7de98d3719312aea617262dd23"
+by: "fixture"
+at: "2026-10"

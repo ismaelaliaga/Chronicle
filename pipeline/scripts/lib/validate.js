@@ -12,6 +12,9 @@ const {
   effectiveRules, walkRequirement, requirementRefs, usesInteractionAll, materializeRules, findCoordinates, findNameLeak,
 } = require('./rules');
 const { canonicalCompact } = require('./canonical');
+const { REJECT_REASONS, TECHNICAL_SHIP_REASONS } = require('./rules');
+const { linkIdFor, refKey, candidateSourceIds } = require('./links');
+const { buildCandidates, candidateId } = require('./candidates');
 
 // ----------------------------------------------------------------------------------------------- configuración y fuentes
 function checkConfig(m, report) {
@@ -116,6 +119,11 @@ function checkEntities(m, report) {
 
     // categorías
     (e.categories || []).forEach((c, i) => { if (!vocab.has(c)) report.error('E-16', file, `/categories/${i}`, `la categoría «${c}» no está en ningún vocabulario (editorial/vocab)`); });
+
+    // D-08 (regla EDITORIAL, no técnica): una entidad creada por la infraestructura bootstrap no ha sido revisada editorialmente
+    if (e.editorial && e.editorial.origin === 'bootstrap' && (e.status === 'review' || e.status === 'published')) {
+      report.error('D-08', file, '/status', `una entidad con editorial.origin «bootstrap» no puede estar en «${e.status}»: nació de la infraestructura y no hay decisión editorial de incluirla (resuélvase con una CandidateDecision accepted o retírese)`);
+    }
 
     // estado
     if (e.status === 'published') {
@@ -347,31 +355,161 @@ function checkTextsAndDecisions(m, report, worldConflicts) {
   }
 }
 
+// ----------------------------------------------------------------------------------------------- Catálogo editorial (Fase 18): decisiones, origen y enlaces
+// Solo lee capas editoriales y World Data (NO Candidate Data): también se ejecuta al generar el pack.
+function checkCatalog(m, report, world) {
+  const entities = Array.from(m.entities.entries()).sort((a, b) => cmp(a[0], b[0]));
+  const subjectKey = (r) => `${r.flavor}|${r.kind}|${r.id}`;
+  const decisions = m.decisions.slice().sort((a, b) => cmp(a.file, b.file));
+  const technical = new Set(TECHNICAL_SHIP_REASONS);
+  const approved = new Set(REJECT_REASONS);
+
+  // por sujeto: una sola decisión (el historial append-only queda fuera de alcance)
+  const bySubject = new Map();
+  for (const d of decisions) {
+    const k = subjectKey(d.doc.subject);
+    if (bySubject.has(k)) report.error('D-09', d.file, '/subject', `ya hay una decisión para ${d.doc.subject.kind}:${d.doc.subject.id} de «${d.doc.subject.flavor}» (${bySubject.get(k).file}); solo se admite una decisión vigente por sujeto`);
+    else bySubject.set(k, d);
+  }
+
+  for (const d of decisions) {
+    const { file, doc } = d;
+    if (!m.creatures.has(subjectKey(doc.subject))) report.error('D-10', file, '/subject', `el sujeto ${doc.subject.kind}:${doc.subject.id} no existe en World Data de «${doc.subject.flavor}»`);
+    if (doc.subject.kind !== 'creature') report.error('D-10', file, '/subject/kind', 'una decisión sobre un NPC se toma sobre una criatura (kind «creature»)');
+
+    // D-04: los motivos de rechazo son EDITORIALES; los motivos técnicos del ship-report nunca lo son
+    (doc.reject_reasons || []).forEach((r, i) => {
+      if (technical.has(r)) report.error('D-04', file, `/reject_reasons/${i}`, `«${r}» es un motivo técnico del ship-report: la falta de datos o la imposibilidad técnica de publicar NO es un motivo editorial de rechazo (use deferred, o no decida)`);
+      else if (!approved.has(r)) report.error('D-04', file, `/reject_reasons/${i}`, `«${r}» no es un motivo de rechazo aprobado (${REJECT_REASONS.join(', ')})`);
+    });
+    if (doc.duplicate_of) {
+      if (!(doc.reject_reasons || []).includes('duplicate_of')) report.error('D-04', file, '/duplicate_of', '«duplicate_of» solo se admite con el motivo de rechazo «duplicate_of»');
+      if (refKey(doc.duplicate_of) === refKey(doc.subject)) report.error('D-04', file, '/duplicate_of', 'una referencia no puede ser duplicada de sí misma');
+      else if (!m.creatures.has(subjectKey(doc.duplicate_of))) report.error('D-04', file, '/duplicate_of', `${doc.duplicate_of.kind}:${doc.duplicate_of.id} no existe en World Data de «${doc.duplicate_of.flavor}»`);
+    }
+
+    if (doc.decision !== 'accepted') continue;
+    const target = m.entities.get(doc.entity);
+    if (!target) { report.error('E-12', file, '/entity', `la entidad «${doc.entity}» no existe`); continue; }
+    // D-03: la decisión accepted apunta a una Entity existente con origin candidate, y su flavor está en applies_to
+    const origin = target.doc.editorial && target.doc.editorial.origin;
+    if (origin !== 'candidate') report.error('D-03', file, '/entity', `«${doc.entity}» tiene editorial.origin «${origin || '(sin origin)'}»: una decisión accepted solo da lugar a entidades con origin «candidate»`);
+    if (!target.doc.applies_to.includes(doc.subject.flavor)) report.error('D-03', file, '/subject/flavor', `el flavor «${doc.subject.flavor}» de la decisión no está en applies_to de «${doc.entity}»`);
+  }
+
+  // D-05: un mismo TechRef no puede estar accepted hacia dos Entities
+  const acceptedBySubject = new Map();
+  for (const d of decisions.filter((x) => x.doc.decision === 'accepted')) {
+    const k = subjectKey(d.doc.subject);
+    if (!acceptedBySubject.has(k)) acceptedBySubject.set(k, new Map());
+    acceptedBySubject.get(k).set(d.doc.entity, d.file);
+  }
+  for (const [k, ents] of Array.from(acceptedBySubject.entries()).sort((a, b) => cmp(a[0], b[0]))) {
+    if (ents.size > 1) {
+      const list = Array.from(ents.keys()).sort(cmp);
+      report.error('D-05', ents.get(list[1]), '/entity', `el TechRef ${k.split('|').slice(1).join(':')} de «${k.split('|')[0]}» está accepted hacia ${list.length} entidades distintas (${list.join(', ')})`);
+    }
+  }
+
+  // D-01 (origin candidate => decisión accepted) y D-06 (el binding coincide con alguna decisión; solo AVISO)
+  for (const [id, { file, doc: e }] of entities) {
+    if (!(e.editorial && e.editorial.origin === 'candidate')) continue;
+    const mine = decisions.filter((x) => x.doc.decision === 'accepted' && x.doc.entity === id);
+    if (mine.length === 0) {
+      report.error('D-01', file, '/editorial/origin', `«${id}» tiene origin «candidate» pero no existe ninguna CandidateDecision accepted que apunte a ella`);
+      continue;
+    }
+    for (const [, { file: bfile, doc: b }] of m.bindings) {
+      if (b.entity !== id || b.status !== 'accepted' || !b.tech_refs) continue;
+      const hit = b.tech_refs.some((r) => mine.some((x) => refKey(x.doc.subject) === refKey(r)));
+      if (!hit) report.warn('D-06', bfile, '/tech_refs', `ningún TechRef del binding coincide con el sujeto de las decisiones accepted de «${id}» (${mine.map((x) => refKey(x.doc.subject)).join(', ')})`);
+    }
+  }
+
+  // decisiones de reconciliación (humanas)
+  const links = new Map((world.links || []).map((l) => [l.id, l]));
+  const seen = new Map();
+  for (const { file, doc } of m.linkDecisions.slice().sort((a, b) => cmp(a.file, b.file))) {
+    const id = linkIdFor(doc.a, doc.b);
+    if (refKey(doc.a) > refKey(doc.b)) report.error('L-03', file, '/a', 'a y b deben ir en orden canónico (a < b por flavor:kind:id)');
+    if (refKey(doc.a) === refKey(doc.b)) report.error('L-03', file, '/b', 'a y b no pueden ser la misma referencia');
+    for (const side of ['a', 'b']) {
+      if (doc[side].kind !== 'creature') report.error('L-02', file, `/${side}/kind`, 'se reconcilian criaturas (kind «creature»)');
+      else if (!m.creatures.has(subjectKey(doc[side]))) report.error('L-02', file, `/${side}`, `${doc[side].kind}:${doc[side].id} no existe en World Data de «${doc[side].flavor}»`);
+    }
+    if (seen.has(id)) report.error('L-06', file, '', `ya hay una decisión para este enlace (${seen.get(id)})`);
+    else seen.set(id, file);
+    if (doc.decision === 'confirm') {
+      const link = links.get(id);
+      if (!link) report.warn('L-05', file, '', 'la confirmación no corresponde a ningún enlace propuesto actualmente (la evidencia ya no existe)');
+      else if (link.fingerprint !== doc.evidence_fingerprint) report.warn('L-04', file, '/evidence_fingerprint', 'decisión desfasada: la evidencia del enlace cambió desde que se confirmó; la confirmación NO se aplica hasta revisarla');
+    }
+  }
+}
+
 // ----------------------------------------------------------------------------------------------- Candidate Data
-function checkCandidates(m, report) {
+// Candidate Data es una capa de PREPARACIÓN editorial: el generador del pack no la lee ni depende de que sea válida.
+function checkCandidates(m, report, world) {
   const signalIds = new Set(m.ds.candidates.signals.map((s) => s.doc.id));
-  const profiles = new Map(m.ds.candidates.profiles.map((p) => [`${p.doc.id}@${p.doc.version}`, p.doc]));
+  const profiles = new Map(Array.from(m.candidateProfiles.entries()).map(([k, v]) => [k, v.doc]));
   for (const p of m.ds.candidates.profiles) {
     p.doc.signals.forEach((s, i) => { if (!signalIds.has(s.id)) report.error('C-02', p.file, `/signals/${i}/id`, `la señal «${s.id}» no tiene definición en candidates/signals`); });
     p.doc.flavors.forEach((f, i) => { if (!m.flavors || !m.flavors.flavors[f]) report.error('C-02', p.file, `/flavors/${i}`, `el flavor «${f}» no está en editorial/flavors.yaml`); });
+    // C-05: no existe todavía ningún mecanismo de aprobación; ningún perfil puede declararse «approved»
+    if (p.doc.approval === 'approved') report.error('C-05', p.file, '/approval', 'ningún perfil de scoring puede ser «approved» todavía (no hay calibración ni política aprobada); use «illustrative» o «proposed»');
+  }
+
+  const allowed = candidateSourceIds(m.sourcesById);
+  const scoredIds = new Set();
+  for (const { file, doc: c } of m.ds.candidates.records) {
+    if (c.profile) {
+      scoredIds.add(c.id);
+      const prof = profiles.get(`${c.profile.id}@${c.profile.version}`);
+      if (!prof) report.error('C-02', file, '/profile', `el perfil «${c.profile.id}» versión ${c.profile.version} no existe`);
+      const sum = c.signals.reduce((a, s) => a + s.contribution, 0);
+      if (Math.abs(sum - c.score.total) > 1e-9) report.error('C-01', file, '/score/total', `score.total (${c.score.total}) debe ser la suma de contribuciones (${sum})`);
+      c.signals.forEach((s, i) => {
+        if (Math.abs(s.weight * s.normalized - s.contribution) > 1e-9) report.error('C-01', file, `/signals/${i}/contribution`, `contribution (${s.contribution}) debe ser weight × normalized (${s.weight * s.normalized})`);
+        if (prof && !prof.signals.some((x) => x.id === s.id)) report.error('C-02', file, `/signals/${i}/id`, `la señal «${s.id}» no está en el perfil`);
+      });
+    }
+    if (c.id !== candidateId(c.subject)) report.error('C-03', file, '/id', `el id debe derivarse del sujeto: «${candidateId(c.subject)}»`);
+    if (c.flavor !== c.subject.flavor) report.error('C-03', file, '/flavor', 'el flavor del candidato debe coincidir con el de su sujeto');
+    if (!m.creatures.has(`${c.subject.flavor}|${c.subject.kind}|${c.subject.id}`)) report.error('C-03', file, '/subject', `el sujeto ${c.subject.kind}:${c.subject.id} no existe en World Data de «${c.subject.flavor}»`);
+    // D-02: solo las fuentes con usage.candidate_generation = true pueden originar un candidato
+    c.sources.forEach((s, i) => {
+      const src = m.sourcesById.get(s.source);
+      if (!src) report.error('D-02', file, `/sources/${i}/source`, `la fuente «${s.source}» no tiene manifiesto`);
+      else if (!allowed.has(s.source)) report.error('D-02', file, `/sources/${i}/source`, `la fuente «${s.source}» no tiene usage.candidate_generation = true: no puede originar candidatos (sus datos solo sirven como investigación)`);
+      else if (src.origin_group !== s.origin_group) report.error('D-02', file, `/sources/${i}/origin_group`, `origin_group «${s.origin_group}» no coincide con el de la fuente («${src.origin_group}»)`);
+    });
+    (c.links || []).forEach((l, i) => { if (!(world.links || []).some((x) => x.id === l)) report.error('L-07', file, `/links/${i}`, `el enlace «${l}» no existe entre los enlaces propuestos actuales`); });
+  }
+
+  // C-04: los candidatos SIN PUNTUAR los produce la máquina: deben coincidir con lo que se regenera (los puntuados son entrada y no se reescriben)
+  const generated = buildCandidates({ creatureDocs: world.creatureDocs, conflicts: world.conflicts, sourcesById: m.sourcesById, links: world.links, scoredIds });
+  const genById = new Map(generated.map((g) => [g.id, g]));
+  for (const g of generated) {
+    const rec = m.candidates.get(g.id);
+    if (!rec) report.error('C-04', `candidates/records/${g.id.replace(/:/g, '__')}.json`, '', 'falta el candidato (ejecute data:candidates)');
+    else if (canonicalCompact(rec.doc) !== canonicalCompact(g)) report.error('C-04', rec.file, '', 'no coincide con lo que regenera data:candidates (ejecute data:candidates)');
   }
   for (const { file, doc: c } of m.ds.candidates.records) {
-    const prof = profiles.get(`${c.profile.id}@${c.profile.version}`);
-    if (!prof) report.error('C-02', file, '/profile', `el perfil «${c.profile.id}» versión ${c.profile.version} no existe`);
-    const sum = c.signals.reduce((a, s) => a + s.contribution, 0);
-    if (Math.abs(sum - c.score.total) > 1e-9) report.error('C-01', file, '/score/total', `score.total (${c.score.total}) debe ser la suma de contribuciones (${sum})`);
-    c.signals.forEach((s, i) => {
-      if (Math.abs(s.weight * s.normalized - s.contribution) > 1e-9) report.error('C-01', file, `/signals/${i}/contribution`, `contribution (${s.contribution}) debe ser weight × normalized (${s.weight * s.normalized})`);
-      if (prof && !prof.signals.some((x) => x.id === s.id)) report.error('C-02', file, `/signals/${i}/id`, `la señal «${s.id}» no está en el perfil`);
-    });
-    if (!m.creatures.has(`${c.subject.flavor}|${c.subject.kind}|${c.subject.id}`)) report.error('C-03', file, '/subject', `el sujeto ${c.subject.kind}:${c.subject.id} no existe en World Data de «${c.subject.flavor}»`);
+    if (!c.profile && !genById.has(c.id)) report.error('C-04', file, '', 'fichero sobrante: ninguna fuente con candidate_generation lo respalda (ejecute data:candidates)');
+  }
+
+  // D-07 / D-11: la decisión se compara con el candidato ACTUAL (los candidatos se regeneran; la decisión histórica no se invalida)
+  for (const { file, doc: d } of m.decisions.slice().sort((a, b) => cmp(a.file, b.file))) {
+    const cand = m.candidates.get(candidateId(d.subject));
+    if (!cand) report.warn('D-11', file, '/subject', `no existe un candidato actual para ${d.subject.kind}:${d.subject.id} de «${d.subject.flavor}»`);
+    else if (cand.doc.inputs_fingerprint !== d.evidence_fingerprint) report.warn('D-07', file, '/evidence_fingerprint', 'la evidencia del candidato ha cambiado desde que se tomó la decisión (la decisión sigue vigente; revísela si procede)');
   }
 }
 
 // ----------------------------------------------------------------------------------------------- transiciones respecto a una línea base
 function checkBaseline(m, baselineDir, report) {
   const baseReport = new Report();
-  const base = loadDataset(baselineDir, baseReport);
+  const base = loadDataset(baselineDir, baseReport, { skipCandidates: true });
   const prev = new Map(base.editorial.entities.map((e) => [e.doc.id, e.doc.status]));
   for (const [id, { file, doc }] of m.entities) {
     if (prev.has(id) && !checkTransition(prev.get(id), doc.status)) {
@@ -384,9 +522,11 @@ function checkBaseline(m, baselineDir, report) {
 }
 
 // ----------------------------------------------------------------------------------------------- orquestación
+// options.scope = 'publish': validación para GENERAR el pack. No carga ni valida Candidate Data (el generador no depende de ella).
 function validateDataset(root, options = {}) {
   const report = new Report();
-  const ds = loadDataset(root, report);
+  const publishScope = options.scope === 'publish';
+  const ds = loadDataset(root, report, { skipCandidates: publishScope });
   const m = buildModel(ds, report);
   checkConfig(m, report);
   checkWorld(m, report);
@@ -400,7 +540,8 @@ function validateDataset(root, options = {}) {
   checkBindings(m, report);
   checkHints(m, report);
   checkTextsAndDecisions(m, report, world.conflicts);
-  checkCandidates(m, report);
+  checkCatalog(m, report, world);
+  if (!publishScope) checkCandidates(m, report, world);
   if (options.baselineDir) checkBaseline(m, path.resolve(options.baselineDir), report);
 
   return { report, ds, model: m, world };

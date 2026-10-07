@@ -9,5 +9,6 @@ reveals_when:
   entity_discovered: { id: "npc:fixture_example_elder" }
 related_to: ["npc:fixture_example_elder"]
 text: "hint:fixture_keeper_1"
+text_origin: original
 status: published
 editorial: { author: "fixture" }

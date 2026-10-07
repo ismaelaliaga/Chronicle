@@ -8,10 +8,11 @@
 //   world/<flavor>/creature/<id>.json       World Data normalizado   (los escribe `normalize`)
 //   world/<flavor>/place/<slug>.json        World Data normalizado   (los escribe `normalize`)
 //   world/<flavor>/conflicts/conf__<h>.json conflictos              (los escribe `normalize`)
+//   world/links/link__<h>.json              enlaces de reconciliación propuestos (los escribe `normalize`)
 //   world/<flavor>/profile.json             perfil de cliente        (entrada)
 //   world/<flavor>/observations/*.json      observaciones            (entrada)
 //   editorial/flavors.yaml                  configuración de versiones
-//   editorial/entities|hints|overrides|decisions|vocab/*.yaml, editorial/bindings/<flavor>/*.yaml, editorial/text/<locale>/*.yaml
+//   editorial/entities|hints|overrides|decisions|link_decisions|vocab/*.yaml, editorial/bindings/<flavor>/*.yaml, editorial/text/<locale>/*.yaml
 //   candidates/records/*.json, candidates/profiles/*.yaml, candidates/signals/*.yaml
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +20,7 @@ const { parseStrictYaml } = require('./yaml-strict');
 const { validateDoc } = require('./schemas');
 const { canonicalPretty } = require('./canonical');
 const { cmp } = require('./report');
+const { linkFileBase } = require('./links');
 
 const idToFileBase = (id) => id.replace(/:/g, '__');
 
@@ -50,8 +52,8 @@ function loadDataset(root, report, options = {}) {
     flavors: null,
     sources: [],
     records: [],
-    world: { entities: [], places: [], profiles: [], observations: [], conflicts: [] },
-    editorial: { entities: [], bindings: [], hints: [], texts: [], overrides: [], decisions: [], vocab: [] },
+    world: { entities: [], places: [], profiles: [], observations: [], conflicts: [], links: [] },
+    editorial: { entities: [], bindings: [], hints: [], texts: [], overrides: [], decisions: [], linkDecisions: [], vocab: [] },
     candidates: { records: [], profiles: [], signals: [] },
   };
 
@@ -130,7 +132,10 @@ function loadDataset(root, report, options = {}) {
   collect(path.join(root, 'sources', 'records'), '.json', 'world.claim_records', 'chronicle.world.claim_records/1', ds.records, expectName((d) => d.source + '.json'));
 
   // ---- World Data
-  for (const flavor of options.skipWorld ? [] : subdirs(path.join(root, 'world'))) {
+  if (!options.skipWorld) {
+    collect(path.join(root, 'world', 'links'), '.json', 'world.link', 'chronicle.world.link/1', ds.world.links, expectName((d) => linkFileBase(d.id) + '.json'));
+  }
+  for (const flavor of options.skipWorld ? [] : subdirs(path.join(root, 'world')).filter((d) => d !== 'links')) {
     const base = path.join(root, 'world', flavor);
     collect(path.join(base, 'creature'), '.json', 'world.entity', 'chronicle.world.entity/1', ds.world.entities, (doc, file, name) => {
       if (doc.ref.flavor !== flavor) { report.error('W-12', file, '/ref/flavor', `el flavor «${doc.ref.flavor}» no coincide con el directorio «${flavor}»`); return false; }
@@ -162,7 +167,8 @@ function loadDataset(root, report, options = {}) {
   collect(path.join(ed, 'entities'), '.yaml', 'editorial.entity', 'chronicle.editorial.entity/1', ds.editorial.entities, expectName((d) => idToFileBase(d.id) + '.yaml'));
   collect(path.join(ed, 'hints'), '.yaml', 'editorial.hint', 'chronicle.editorial.hint/1', ds.editorial.hints, expectName((d) => idToFileBase(d.id) + '.yaml'));
   collect(path.join(ed, 'overrides'), '.yaml', 'editorial.override', 'chronicle.editorial.override/1', ds.editorial.overrides, expectName((d) => idToFileBase(d.id) + '.yaml'));
-  collect(path.join(ed, 'decisions'), '.yaml', 'editorial.candidate_decision', 'chronicle.editorial.candidate_decision/1', ds.editorial.decisions);
+  collect(path.join(ed, 'decisions'), '.yaml', 'editorial.candidate_decision', 'chronicle.editorial.candidate_decision/2', ds.editorial.decisions);
+  collect(path.join(ed, 'link_decisions'), '.yaml', 'editorial.link_decision', 'chronicle.editorial.link_decision/1', ds.editorial.linkDecisions);
   collect(path.join(ed, 'vocab'), '.yaml', 'editorial.vocab', 'chronicle.editorial.vocab/1', ds.editorial.vocab);
   for (const flavor of subdirs(path.join(ed, 'bindings'))) {
     collect(path.join(ed, 'bindings', flavor), '.yaml', 'editorial.binding', 'chronicle.editorial.binding/1', ds.editorial.bindings, (doc, file, name) => {
@@ -177,7 +183,8 @@ function loadDataset(root, report, options = {}) {
     });
   }
 
-  // ---- candidatos
+  // ---- candidatos (el generador del pack NO los lee: `skipCandidates`)
+  if (options.skipCandidates) return ds;
   collect(path.join(root, 'candidates', 'records'), '.json', 'candidate.record', 'chronicle.candidate.record/1', ds.candidates.records, expectName((d) => idToFileBase(d.id) + '.json'));
   collect(path.join(root, 'candidates', 'profiles'), '.yaml', 'candidate.scoring_profile', 'chronicle.candidate.scoring_profile/1', ds.candidates.profiles);
   collect(path.join(root, 'candidates', 'signals'), '.yaml', 'candidate.signal', 'chronicle.candidate.signal/1', ds.candidates.signals);

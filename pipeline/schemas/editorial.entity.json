@@ -115,6 +115,12 @@
         "notes": {
           "type": "string",
           "minLength": 1
+        },
+        "origin": {
+          "enum": [
+            "candidate",
+            "bootstrap"
+          ]
         }
       },
       "required": [
@@ -452,6 +458,27 @@
         "required": [
           "discovery"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "npc"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "editorial": {
+            "required": [
+              "origin"
+            ]
+          }
+        }
       }
     }
   ]

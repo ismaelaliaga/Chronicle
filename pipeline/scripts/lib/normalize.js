@@ -11,9 +11,12 @@ const { resolveField, sortClaims } = require('./resolve');
 const { validateDoc } = require('./schemas');
 const { placeSlug, idToFileBase } = require('./loader');
 const { cmp } = require('./report');
+const { buildLinks, linkIdFor, linkFileBase } = require('./links');
 
 // Directorios de World Data cuyo contenido escribe el normalizador (el resto son entradas: profile.json y observations/).
+// `world/links/` (sin flavor: un enlace puede unir dos versiones) también es del normalizador.
 const OWNED_DIRS = ['creature', 'place', 'conflicts'];
+const LINKS_DIR = 'world/links';
 
 function subjectKey(subject) {
   if (subject.kind === 'name_only') return `place/${placeSlug(subject.key)}`;
@@ -117,7 +120,16 @@ function buildWorld(ds, report) {
     const relPath = `world/${c.subject.flavor}/conflicts/${idToFileBase(c.id)}.json`;
     if (validateDoc('world.conflict', c, report, relPath)) outputs.set(relPath, c);
   }
-  return { outputs, conflicts };
+
+  // enlaces de reconciliación propuestos (Fase 18). Una LinkDecision `reject` (different_from) impide que la pareja vuelva a proponerse.
+  const creatureDocs = Array.from(outputs.values()).filter((d) => d.schema === 'chronicle.world.entity/1');
+  const rejected = new Set((ds.editorial.linkDecisions || []).filter((d) => d.doc.decision === 'reject').map((d) => linkIdFor(d.doc.a, d.doc.b)));
+  const links = buildLinks(creatureDocs, sourcesById, rejected);
+  for (const l of links) {
+    const relPath = `${LINKS_DIR}/${linkFileBase(l.id)}.json`;
+    if (validateDoc('world.link', l, report, relPath)) outputs.set(relPath, l);
+  }
+  return { outputs, conflicts, links, creatureDocs };
 }
 
 // Archivos propiedad del normalizador que existen hoy en disco (rutas relativas).
@@ -125,7 +137,9 @@ function listOwnedFiles(root) {
   const found = [];
   const worldDir = path.join(root, 'world');
   if (!fs.existsSync(worldDir)) return found;
-  for (const flavor of fs.readdirSync(worldDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort(cmp)) {
+  const linksDir = path.join(worldDir, 'links');
+  if (fs.existsSync(linksDir)) for (const f of fs.readdirSync(linksDir).sort(cmp)) found.push(`${LINKS_DIR}/${f}`);
+  for (const flavor of fs.readdirSync(worldDir, { withFileTypes: true }).filter((e) => e.isDirectory() && e.name !== 'links').map((e) => e.name).sort(cmp)) {
     for (const d of OWNED_DIRS) {
       const dir = path.join(worldDir, flavor, d);
       if (!fs.existsSync(dir)) continue;

@@ -101,12 +101,20 @@
     "reviewer": {
       "type": "string",
       "minLength": 1
+    },
+    "approval": {
+      "enum": [
+        "illustrative",
+        "proposed",
+        "approved"
+      ]
     }
   },
   "required": [
     "schema",
     "id",
     "version",
+    "approval",
     "flavors",
     "signals",
     "author"

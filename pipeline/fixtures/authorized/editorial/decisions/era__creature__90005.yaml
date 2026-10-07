@@ -1,0 +1,10 @@
+schema: "chronicle.editorial.candidate_decision/2"
+subject: { flavor: era, kind: creature, id: 90005 }
+decision: accepted
+entity: "npc:fixture_conflicted_example"
+inclusion_reasons: [lore_presence]
+reason: "FIXTURE SINTETICO: aceptada editorialmente; su nombre esta en conflicto en World Data."
+policy_version: 1
+evidence_fingerprint: "sha256:1c69a9dcde6783912d9e7ce248465b2082f1a9e494e781c9bce549180856e8a2"
+by: "fixture"
+at: "2026-10"

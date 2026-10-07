@@ -1,0 +1,34 @@
+{
+  "a": {
+    "flavor": "era",
+    "id": 90004,
+    "kind": "creature"
+  },
+  "b": {
+    "flavor": "fixture_alt",
+    "id": 90008,
+    "kind": "creature"
+  },
+  "evidence": [
+    {
+      "kind": "same_name",
+      "sources": [
+        "fixture_authorized_source"
+      ],
+      "value": "fixture elder"
+    },
+    {
+      "kind": "same_place",
+      "sources": [
+        "fixture_authorized_source"
+      ],
+      "value": "area:9001"
+    }
+  ],
+  "fingerprint": "sha256:b6065faf369978c30b42b98bbcac76024d4e805af427b1b6e247f4f78f1cffa6",
+  "id": "link:fa845ba18707f3b4",
+  "relation": "same_entity_across_flavors",
+  "rule_version": 1,
+  "schema": "chronicle.world.link/1",
+  "status": "probable_match"
+}

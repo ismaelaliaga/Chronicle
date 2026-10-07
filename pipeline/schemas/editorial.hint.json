@@ -88,6 +88,11 @@
       "required": [
         "author"
       ]
+    },
+    "text_origin": {
+      "enum": [
+        "original"
+      ]
     }
   },
   "required": [
@@ -98,6 +103,7 @@
     "necessity",
     "tier",
     "text",
+    "text_origin",
     "status",
     "editorial"
   ],

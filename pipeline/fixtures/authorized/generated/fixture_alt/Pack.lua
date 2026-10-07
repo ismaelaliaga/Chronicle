@@ -87,9 +87,9 @@ Chronicle.Pack = {
         },
         flavor = "fixture_alt",
         generated_from = {
-            editorial = "sha256:8ff2f80cff107ea1fe0840d27a569ef9254f87d4e91fe2914d305f3a104a36b3",
+            editorial = "sha256:4162130ec1b123cfcb1f796c038823793554595fa89130226cff3060b4339f51",
             generator = "0.1.0",
-            world = "sha256:08b52cabf559d64f64d9de578105ad87d32aaf822ae069148d8a8b293b01fdd0",
+            world = "sha256:dbbfa061dd1a03bb089ad8a89206f96c3e3f005f93bf48a0e7ff10503fe65f69",
         },
         locales = {
             "esES",

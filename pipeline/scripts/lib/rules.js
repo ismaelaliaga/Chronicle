@@ -47,6 +47,22 @@ function normalizeName(text) {
   return t;
 }
 
+// ---- catálogo editorial (Fase 18)
+// Motivos APROBADOS de rechazo. Los motivos técnicos del ship-report NUNCA son motivos editoriales (D-04); se comparan con REASON_ORDER de ship.js.
+const REJECT_REASONS = ['generic_vendor', 'generic_guard', 'repeated_filler', 'common_creature', 'technical_only', 'no_interest', 'duplicate_of'];
+const TECHNICAL_SHIP_REASONS = [
+  'source_not_authorized_for_pack', 'no_binding', 'tech_ref_missing', 'entity_absent',
+  'capability_unavailable', 'capability_unverified', 'blocked_by_conflict', 'not_applicable',
+];
+// Heurística INICIAL (propuesta pendiente de aprobación del supervisor): un nombre es «genérico» si su última palabra es uno de estos sustantivos.
+// Solo sirve para NO proponer enlaces probables entre nombres genéricos; nunca decide nada editorial.
+const GENERIC_NAME_NOUNS = ['guard', 'guardia', 'villager', 'aldeano', 'citizen', 'ciudadano', 'vendor', 'vendedor', 'merchant', 'mercader', 'peasant', 'campesino'];
+
+function isGenericName(text) {
+  const tokens = normalizeName(text).split(' ').filter(Boolean);
+  return tokens.length > 0 && GENERIC_NAME_NOUNS.includes(tokens[tokens.length - 1]);
+}
+
 // ---- reglas de descubrimiento
 function implicitRules(type) {
   if (type === 'zone' || type === 'city' || type === 'subzone') return { method: 'place_enter' };
@@ -163,6 +179,7 @@ function findNameLeak(text, names) {
 module.exports = {
   PLACE_TYPES, ENTITY_TYPES, TYPE_RULES, MAX_SLUG, TRANSITIONS,
   typeOf, slugOf, checkTransition, normalizeName,
+  REJECT_REASONS, TECHNICAL_SHIP_REASONS, GENERIC_NAME_NOUNS, isGenericName,
   implicitRules, effectiveRules, walkRequirement, walkInteraction, interactionTypes, usesInteractionAll, requirementRefs,
   ancestorZone, materializeRules, findCoordinates, findNameLeak, COORDINATE_PATTERNS,
 };

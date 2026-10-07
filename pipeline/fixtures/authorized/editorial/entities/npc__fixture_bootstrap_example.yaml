@@ -1,0 +1,12 @@
+schema: "chronicle.editorial.entity/1"
+id: "npc:fixture_bootstrap_example"
+type: npc
+status: drafting
+importance: standard
+located_in: "subzone:fixture_hollow"
+applies_to: [era]
+requires_hint: false
+discovery:
+  method: interaction
+  interaction: { type: gossip }
+editorial: { author: "fixture", origin: bootstrap, notes: "FIXTURE SINTETICO: creada por infraestructura; pendiente de revision editorial (sin decision)" }

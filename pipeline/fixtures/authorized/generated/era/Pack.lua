@@ -134,9 +134,9 @@ Chronicle.Pack = {
         },
         flavor = "era",
         generated_from = {
-            editorial = "sha256:36d37381a502502078c0d3322185311247e1c2444bbb6b7f84d58b831c8991d0",
+            editorial = "sha256:ec2905f31d0459c6e173865a4a19eb7d84168d905505ba8d191c09530d2fe080",
             generator = "0.1.0",
-            world = "sha256:2c6a655cfa03f5ec980c296ed4efec14992895f89f9068771020862cb306fb06",
+            world = "sha256:9d2cadafa4aa0f88c53852ecdb20f816a60b83f5c0c826b7fddc1591d4eb98ac",
         },
         locales = {
             "esES",

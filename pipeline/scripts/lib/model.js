@@ -27,6 +27,11 @@ function buildModel(ds, report) {
     profiles: new Map(),
     observations: new Map(),
     conflicts: ds.world.conflicts.map((c) => c.doc),
+    candidates: new Map(), // id -> { file, doc }   (vacío si el dataset se cargó sin candidatos: el generador no los lee)
+    candidateProfiles: new Map(), // `${id}@${version}` -> { file, doc }
+    decisions: ds.editorial.decisions,
+    linkDecisions: ds.editorial.linkDecisions,
+    links: new Map(), // id -> { file, doc }
   };
 
   for (const s of ds.sources) addUnique(m.sourcesById, s.doc.id, { file: s.file, doc: s.doc }, report, 'S-03', 'fuente');
@@ -53,6 +58,9 @@ function buildModel(ds, report) {
   for (const p of ds.world.places) {
     if (p.doc.ref.kind === 'name_only') addUnique(m.places, `${p.doc.ref.flavor}|${p.doc.ref.key}`, p, report, 'W-12', 'lugar del mundo');
   }
+  for (const l of ds.world.links) addUnique(m.links, l.doc.id, l, report, 'W-12', 'enlace');
+  for (const c of ds.candidates.records) addUnique(m.candidates, c.doc.id, c, report, 'C-03', 'candidato');
+  for (const pr of ds.candidates.profiles) addUnique(m.candidateProfiles, `${pr.doc.id}@${pr.doc.version}`, pr, report, 'C-02', 'perfil de scoring (id@versión)');
   for (const p of ds.world.profiles) addUnique(m.profiles, p.doc.flavor, p, report, 'W-12', 'perfil de cliente');
   for (const o of ds.world.observations) addUnique(m.observations, o.doc.id, o, report, 'W-12', 'observación');
   return m;

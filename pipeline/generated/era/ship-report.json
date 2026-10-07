@@ -19,64 +19,6 @@
           "claims_from": [
             "wow_client"
           ],
-          "datum": "exists"
-        }
-      ],
-      "entity": "npc:grelin_whitebeard",
-      "flavor": "era",
-      "omitted_optional": [
-        {
-          "blocked_because": "status = research_only",
-          "claims_from": [
-            "legacy_addon"
-          ],
-          "datum": "attributes.display_id"
-        }
-      ],
-      "reasons": [
-        "source_not_authorized_for_pack",
-        "capability_unverified:interaction.gossip"
-      ],
-      "warnings": []
-    },
-    {
-      "authorized_by": [],
-      "available": false,
-      "details": [
-        {
-          "blocked_because": "usage.generated_data = false",
-          "claims_from": [
-            "wow_client"
-          ],
-          "datum": "exists"
-        }
-      ],
-      "entity": "npc:sten_stoutarm",
-      "flavor": "era",
-      "omitted_optional": [
-        {
-          "blocked_because": "status = research_only",
-          "claims_from": [
-            "legacy_addon"
-          ],
-          "datum": "attributes.display_id"
-        }
-      ],
-      "reasons": [
-        "source_not_authorized_for_pack",
-        "capability_unverified:interaction.gossip"
-      ],
-      "warnings": []
-    },
-    {
-      "authorized_by": [],
-      "available": false,
-      "details": [
-        {
-          "blocked_because": "usage.generated_data = false",
-          "claims_from": [
-            "wow_client"
-          ],
           "datum": "texts.esES.subzone_text"
         }
       ],

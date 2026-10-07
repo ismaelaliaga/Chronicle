@@ -1,0 +1,31 @@
+{
+  "display": {
+    "names": {
+      "enUS": "Fixture Bootstrap"
+    }
+  },
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flavor": "era",
+  "id": "cand:era:creature:90011",
+  "inputs_fingerprint": "sha256:85430e048fe09f87b80bec5fc7f0e13ca39841f0ed3db764ee5ab7476c49aaf5",
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 2,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 90011,
+    "kind": "creature"
+  }
+}

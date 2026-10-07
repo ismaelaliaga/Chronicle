@@ -1,0 +1,32 @@
+{
+  "data_gaps": [
+    "display_name"
+  ],
+  "evidence_summary": {
+    "client_verified": true,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flags": [
+    "data_gap"
+  ],
+  "flavor": "era",
+  "id": "cand:era:creature:786",
+  "inputs_fingerprint": "sha256:c84e632079145a7b515bd127a7bd3f164e437726ac17d718d0e1e959bf7e53cb",
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 1,
+      "origin_group": "wow_client",
+      "source": "wow_client"
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 786,
+    "kind": "creature"
+  }
+}

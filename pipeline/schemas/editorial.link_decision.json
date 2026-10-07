@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronicle.local/schemas/editorial.link_decision.json",
+  "title": "Decisión humana sobre un enlace de reconciliación (Fase 18). «matched» no implica inclusión editorial",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "chronicle.editorial.link_decision/1"
+    },
+    "a": {
+      "$ref": "common.json#/$defs/TechRef"
+    },
+    "b": {
+      "$ref": "common.json#/$defs/TechRef"
+    },
+    "decision": {
+      "enum": [
+        "confirm",
+        "reject"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_fingerprint": {
+      "$ref": "common.json#/$defs/Fingerprint"
+    },
+    "by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "at": {
+      "$ref": "common.json#/$defs/DateText"
+    }
+  },
+  "required": [
+    "schema",
+    "a",
+    "b",
+    "decision",
+    "reason",
+    "evidence_fingerprint",
+    "by",
+    "at"
+  ]
+}

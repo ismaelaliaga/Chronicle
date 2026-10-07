@@ -1,0 +1,31 @@
+{
+  "display": {
+    "names": {
+      "enUS": "Fixture Drifter"
+    }
+  },
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flavor": "era",
+  "id": "cand:era:creature:90009",
+  "inputs_fingerprint": "sha256:d0ac23c405acc85151e63a10fd3b176bcbf90eda2467eb60f59018027ad818bf",
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 2,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 90009,
+    "kind": "creature"
+  }
+}

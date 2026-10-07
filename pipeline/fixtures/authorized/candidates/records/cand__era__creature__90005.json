@@ -1,0 +1,42 @@
+{
+  "data_gaps": [
+    "display_name"
+  ],
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 3,
+    "open_conflicts": 1
+  },
+  "flags": [
+    "data_gap"
+  ],
+  "flavor": "era",
+  "id": "cand:era:creature:90005",
+  "inputs_fingerprint": "sha256:1c69a9dcde6783912d9e7ce248465b2082f1a9e494e781c9bce549180856e8a2",
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 1,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    },
+    {
+      "claims": 1,
+      "origin_group": "fixture_source_a",
+      "source": "fixture_source_a"
+    },
+    {
+      "claims": 1,
+      "origin_group": "fixture_source_b",
+      "source": "fixture_source_b"
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 90005,
+    "kind": "creature"
+  }
+}

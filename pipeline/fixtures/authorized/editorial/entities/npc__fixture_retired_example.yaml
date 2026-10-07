@@ -8,4 +8,4 @@ retired:
   reason: "Fixture: entidad retirada para probar que el Registry la sigue conociendo."
   since: "2026-10"
   superseded_by: "npc:fixture_example_keeper"
-editorial: { author: "fixture", notes: "FIXTURE SINTETICO" }
+editorial: { author: "fixture", origin: bootstrap, notes: "FIXTURE SINTETICO" }

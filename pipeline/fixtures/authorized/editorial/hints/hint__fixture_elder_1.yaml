@@ -7,5 +7,6 @@ tier: 1
 reveals_when:
   place_discovered: { id: "zone:fixture_land" }
 text: "hint:fixture_elder_1"
+text_origin: original
 status: published
 editorial: { author: "fixture" }

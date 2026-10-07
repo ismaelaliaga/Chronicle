@@ -1,0 +1,10 @@
+schema: "chronicle.editorial.candidate_decision/2"
+subject: { flavor: era, kind: creature, id: 90007 }
+decision: rejected
+reject_reasons: [generic_vendor]
+reason: "FIXTURE SINTETICO: vendedor generico sin relevancia narrativa."
+resurface: { policy: on_signal_change, threshold: 20 }
+policy_version: 1
+evidence_fingerprint: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+by: "fixture"
+at: "2026-10"

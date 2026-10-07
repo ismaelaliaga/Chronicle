@@ -1,0 +1,34 @@
+{
+  "display": {
+    "names": {
+      "enUS": "Fixture Elder"
+    }
+  },
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flavor": "fixture_alt",
+  "id": "cand:fixture_alt:creature:90008",
+  "inputs_fingerprint": "sha256:980d253cdb0121a459c09b4fd6d62d21b0e7dc1ded7af756ecd14c932eb08b4d",
+  "links": [
+    "link:fa845ba18707f3b4"
+  ],
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 3,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    }
+  ],
+  "subject": {
+    "flavor": "fixture_alt",
+    "id": 90008,
+    "kind": "creature"
+  }
+}

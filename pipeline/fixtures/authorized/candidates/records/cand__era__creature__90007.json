@@ -1,0 +1,63 @@
+{
+  "data_gaps": [
+    "lore_relation"
+  ],
+  "display": {
+    "names": {
+      "enUS": "Fixture Vendor"
+    }
+  },
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flags": [
+    "data_gap"
+  ],
+  "flavor": "era",
+  "id": "cand:era:creature:90007",
+  "inputs_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "profile": {
+    "id": "dun_morogh_pilot",
+    "version": 1
+  },
+  "rank": 1,
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "score": {
+    "total": -40
+  },
+  "signals": [
+    {
+      "contribution": 0,
+      "evidence": [],
+      "id": "quest_relevance",
+      "normalized": 0,
+      "raw": 0,
+      "weight": 30
+    },
+    {
+      "contribution": -40,
+      "evidence": [],
+      "id": "generic_vendor",
+      "normalized": 1,
+      "raw": 1,
+      "weight": -40
+    }
+  ],
+  "sources": [
+    {
+      "claims": 2,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    }
+  ],
+  "subject": {
+    "flavor": "era",
+    "id": 90007,
+    "kind": "creature"
+  }
+}

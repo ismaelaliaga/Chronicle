@@ -237,15 +237,15 @@ test('W-13: la clave de un lugar name_only debe estar normalizada', () => {
 
 // ------------------------------------------------------------------------------------------------ candidatos
 test('C-01 / C-02 / C-03: score = suma de contribuciones, perfil y señales definidos, sujeto existente', () => {
-  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90006.json', '"total": -40', '"total": -30')), 'C-01', /suma de contribuciones/);
-  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90006.json', '"contribution": -40', '"contribution": -35')), 'C-01', /weight × normalized/);
-  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90006.json', '"version": 1', '"version": 7')), 'C-02', /no existe/);
+  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90007.json', '"total": -40', '"total": -30')), 'C-01', /suma de contribuciones/);
+  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90007.json', '"contribution": -40', '"contribution": -35')), 'C-01', /weight × normalized/);
+  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90007.json', '"version": 1', '"version": 7')), 'C-02', /no existe/);
   expectError(run((t) => edit(t, 'candidates/profiles/dun_morogh_pilot.yaml', 'id: generic_vendor', 'id: señal_inventada'.replace('ñ', 'n'))), 'C-02', /no tiene definición/);
-  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90006.json', '"id": 90006', '"id": 90077')), 'C-03', /no existe en World Data/);
+  expectError(run((t) => edit(t, 'candidates/records/cand__era__creature__90007.json', '"id": 90007', '"id": 90077')), 'C-03', /no existe en World Data/);
 });
 
 test('un candidato con un campo de inclusión se rechaza por esquema (SCORE != DECISION EDITORIAL)', () => {
-  const r = run((t) => edit(t, 'candidates/records/cand__era__creature__90006.json', '"flags"', '"include": true,\n  "flags"'));
+  const r = run((t) => edit(t, 'candidates/records/cand__era__creature__90007.json', '"flags"', '"include": true,\n  "flags"'));
   assert.ok(r.codes.includes('SCHEMA') || r.codes.includes('J-02'), r.text);
   assert.ok(r.errors.some((e) => /include/.test(e.message)), r.text);
 });

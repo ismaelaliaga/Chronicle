@@ -39,6 +39,37 @@
       }
     }
   },
+  "places": {
+    "claims": [
+      {
+        "confidence": "source_reported",
+        "provenance": {
+          "locator": "fixture sintetico",
+          "method": "import",
+          "source": "fixture_authorized_source",
+          "source_version": "fixture"
+        },
+        "value": [
+          {
+            "flavor": "era",
+            "id": 9001,
+            "kind": "area"
+          }
+        ]
+      }
+    ],
+    "resolved": {
+      "rule": "single_claim",
+      "status": "resolved",
+      "value": [
+        {
+          "flavor": "era",
+          "id": 9001,
+          "kind": "area"
+        }
+      ]
+    }
+  },
   "ref": {
     "flavor": "era",
     "id": 90004,

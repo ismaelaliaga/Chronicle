@@ -1,0 +1,31 @@
+{
+  "display": {
+    "names": {
+      "enUS": "Fixture Keeper Alt"
+    }
+  },
+  "evidence_summary": {
+    "client_verified": false,
+    "independent_origins": 1,
+    "open_conflicts": 0
+  },
+  "flavor": "fixture_alt",
+  "id": "cand:fixture_alt:creature:90002",
+  "inputs_fingerprint": "sha256:3e7a1b8a283bbb17f1eee12cf66f96ed94629c7de98d3719312aea617262dd23",
+  "research": {
+    "status": "new"
+  },
+  "schema": "chronicle.candidate.record/1",
+  "sources": [
+    {
+      "claims": 2,
+      "origin_group": "fixture_authorized_source",
+      "source": "fixture_authorized_source"
+    }
+  ],
+  "subject": {
+    "flavor": "fixture_alt",
+    "id": 90002,
+    "kind": "creature"
+  }
+}

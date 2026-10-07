@@ -84,7 +84,7 @@ test('IDs: ChronicleId, HintId, TechRef y flavor rechazan formatos inválidos', 
 });
 
 test('editorial.entity: npc exige discovery salvo si está retirada; una retirada exige «retired» y no lleva reglas', () => {
-  const base = { schema: 'chronicle.editorial.entity/1', id: 'npc:x', type: 'npc', applies_to: ['era'], editorial: { author: 'a' } };
+  const base = { schema: 'chronicle.editorial.entity/1', id: 'npc:x', type: 'npc', applies_to: ['era'], editorial: { author: 'a', origin: 'candidate' } };
   assert.equal(check('editorial.entity', { ...base, status: 'published' }).ok, false);
   assert.equal(check('editorial.entity', { ...base, status: 'published', discovery: { method: 'interaction', interaction: { type: 'gossip' } } }).ok, true);
   assert.equal(check('editorial.entity', { ...base, status: 'retired', applies_to: [], retired: { reason: 'r' } }).ok, true);
@@ -94,12 +94,12 @@ test('editorial.entity: npc exige discovery salvo si está retirada; una retirad
 });
 
 test('editorial.entity: no admite campos técnicos del cliente (npcID, displayID, coordenadas)', () => {
-  const doc = { schema: 'chronicle.editorial.entity/1', id: 'npc:x', type: 'npc', status: 'published', applies_to: ['era'], editorial: { author: 'a' }, discovery: { method: 'none' } };
+  const doc = { schema: 'chronicle.editorial.entity/1', id: 'npc:x', type: 'npc', status: 'published', applies_to: ['era'], editorial: { author: 'a', origin: 'candidate' }, discovery: { method: 'none' } };
   for (const extra of [{ npcID: 786 }, { displayID: 1 }, { x: 1, y: 2 }, { name: 'texto' }]) assert.equal(check('editorial.entity', { ...doc, ...extra }).ok, false, JSON.stringify(extra));
 });
 
 test('DiscoveryRules: gramática de interacción (type/any/all) y requisitos; other exige label', () => {
-  const entity = (discovery) => ({ schema: 'chronicle.editorial.entity/1', id: 'npc:x', type: 'npc', status: 'published', applies_to: ['era'], editorial: { author: 'a' }, discovery });
+  const entity = (discovery) => ({ schema: 'chronicle.editorial.entity/1', id: 'npc:x', type: 'npc', status: 'published', applies_to: ['era'], editorial: { author: 'a', origin: 'candidate' }, discovery });
   const ok = (d) => check('editorial.entity', entity(d)).ok;
   assert.equal(ok({ method: 'interaction', interaction: { type: 'quest' } }), true);
   assert.equal(ok({ method: 'interaction', interaction: { any: [{ type: 'gossip' }, { type: 'quest' }] } }), true);
@@ -133,6 +133,7 @@ test('candidate.record: ningún campo de inclusión o decisión (SCORE != DECISI
   const rec = {
     schema: 'chronicle.candidate.record/1', id: 'cand:era:creature:1', flavor: 'era', subject: { flavor: 'era', kind: 'creature', id: 1 },
     display: { names: {} }, profile: { id: 'p', version: 1 }, signals: [], score: { total: 0 }, rank: 1, inputs_fingerprint: FP,
+    sources: [{ source: 's', origin_group: 's', claims: 1 }], evidence_summary: { independent_origins: 1, client_verified: false, open_conflicts: 0 }, research: { status: 'new' },
   };
   assert.equal(check('candidate.record', rec).ok, true);
   for (const extra of [{ include: true }, { accepted: true }, { status: 'accepted' }, { decision: 'accept' }]) assert.equal(check('candidate.record', { ...rec, ...extra }).ok, false, JSON.stringify(extra));

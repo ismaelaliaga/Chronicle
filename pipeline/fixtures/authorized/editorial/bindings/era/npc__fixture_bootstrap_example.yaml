@@ -1,0 +1,8 @@
+schema: "chronicle.editorial.binding/1"
+entity: "npc:fixture_bootstrap_example"
+flavor: era
+status: accepted
+tech_refs:
+  - { flavor: era, kind: creature, id: 90011 }
+attested: { by: "fixture", method: manual_review, at: "2026-10" }
+notes: "FIXTURE SINTETICO. Un binding no concede autorizacion ni implica decision editorial."
